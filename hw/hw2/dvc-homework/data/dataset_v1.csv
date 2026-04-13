@@ -1,0 +1,16 @@
+id,name,category,value,date
+1,Alice,enterprise,15000,2025-10-01
+2,Bob,smb,3200,2025-10-03
+3,Charlie,enterprise,28000,2025-10-05
+4,Diana,api,450,2025-10-07
+5,Eve,smb,5100,2025-10-10
+6,Frank,enterprise,19500,2025-10-12
+7,Grace,api,780,2025-10-15
+8,Hank,smb,4200,2025-10-18
+3,Charlie,enterprise,28000,2025-10-05
+9,Ivan,enterprise,,2025-11-01
+10,Julia,api,920,2025-11-05
+5,Eve,smb,5100,2025-10-10
+11,Kevin,smb,6100,
+12,Laura,ENTERPRISE,31000,2025-11-15
+13,Mike,,8900,2025-11-18
