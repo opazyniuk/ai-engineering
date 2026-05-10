@@ -5,3 +5,6 @@ __pycache__/
 .claude/
 *.egg-info/
 .env
+.idea/
+mlruns/
+*.db

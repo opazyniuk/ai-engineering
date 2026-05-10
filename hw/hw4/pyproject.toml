@@ -1,0 +1,24 @@
+[project]
+name = "hw4"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.136.1",
+    "jinja2>=3.1.6",
+    "langchain-core>=0.2.0",
+    "langchain-openai>=0.1.0",
+    "langgraph>=0.2.0",
+    "mlflow>=3.11.1",
+    "numpy>=2.4.4",
+    "pandas>=2.3.3",
+    "pydantic>=2.0.0",
+    "python-dotenv>=1.0.0",
+    "python-multipart>=0.0.27",
+    "scikit-learn>=1.8.0",
+    "streamlit>=1.30.0",
+    "streamlit-agraph>=0.0.45",
+    "uvicorn[standard]>=0.46.0",
+    "xgboost>=3.2.0",
+]
