@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "provider": "ollama",
+    "valid_json": true,
+    "latency_seconds": 6.174156291875988,
+    "input_tokens": 612,
+    "output_tokens": 167
+  },
+  "metrics": {
+    "tasks_found": 1,
+    "tasks_total": 4,
+    "hallucinated_owners": 0,
+    "decisions_found": 1,
+    "decisions_total": 1
+  },
+  "result": {
+    "summary": "Вирішено зробити мобільну версію поки не робимо, фокусуватися на десктопі та додати Sentry на staging.",
+    "tasks": [
+      {
+        "owner": "Іван",
+        "task": "Фіксити чергу повідомлень у Stripe та додати Sentry на staging",
+        "deadline": null
+      },
+      {
+        "owner": "Мартин",
+        "task": "Додати чергу повідомлень у свій список після черги",
+        "deadline": null
+      }
+    ],
+    "decisions": [
+      "Мобільна версія поки не робимо, фокусуватися на десктопі"
+    ]
+  },
+  "raw": null
+}

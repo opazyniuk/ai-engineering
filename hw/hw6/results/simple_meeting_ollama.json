@@ -1,0 +1,41 @@
+{
+  "meta": {
+    "provider": "ollama",
+    "valid_json": true,
+    "latency_seconds": 8.257218291983008,
+    "input_tokens": 358,
+    "output_tokens": 230
+  },
+  "metrics": {
+    "tasks_found": 3,
+    "tasks_total": 3,
+    "hallucinated_owners": 0,
+    "decisions_found": 0,
+    "decisions_total": 2
+  },
+  "result": {
+    "summary": "Вирішено розподілити роботу по новому dashboard аналітики, frontend пишеться на React, code review обов'язковий перед merge у main.",
+    "tasks": [
+      {
+        "owner": "Іван",
+        "task": "Береш UI-прототип у Figma до 15 травня",
+        "deadline": "2026-05-15"
+      },
+      {
+        "owner": "Мартин",
+        "task": "Готуєш REST API для метрик користувачів до 20 травня",
+        "deadline": "2026-05-20"
+      },
+      {
+        "owner": "Анна",
+        "task": "Збері вимоги від маркетингу та оновлю спеку до 14 травня",
+        "deadline": "2026-05-14"
+      }
+    ],
+    "decisions": [
+      "Фронтенд пишеться на React.",
+      "Код рецензування обов'язковий перед merge у main."
+    ]
+  },
+  "raw": null
+}

@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "provider": "openai",
+    "valid_json": true,
+    "latency_seconds": 7.08120070816949,
+    "input_tokens": 555,
+    "output_tokens": 318
+  },
+  "metrics": {
+    "tasks_found": 4,
+    "tasks_total": 4,
+    "hallucinated_owners": 0,
+    "decisions_found": 3,
+    "decisions_total": 3
+  },
+  "result": {
+    "summary": "Було вирішено перейти на JWT-авторизацію для нових сервісів та встановити SLO для payment-сервісу.",
+    "tasks": [
+      {
+        "owner": "Юрій",
+        "task": "Підготувати OpenAPI-специфікацію для нових REST-ендпоінтів",
+        "deadline": "2026-05-28"
+      },
+      {
+        "owner": "Софія",
+        "task": "Налаштувати Prometheus alert на p99 latency понад 500ms для payment-сервісу",
+        "deadline": "2026-05-22"
+      },
+      {
+        "owner": "Софія",
+        "task": "Підняти ліміт реплік у k8s з 6 до 12",
+        "deadline": null
+      },
+      {
+        "owner": "Дмитро",
+        "task": "Перепакувати Docker-образи на distroless base",
+        "deadline": "2026-05-25"
+      }
+    ],
+    "decisions": [
+      "Усі нові сервіси стартують з JWT-авторизацією, кастомні токени deprecated.",
+      "SLO на payment-сервіс — 99.95% доступність, p99 < 500ms.",
+      "Code review для terraform-змін потребує двох approver-ів, не одного."
+    ]
+  },
+  "raw": null
+}

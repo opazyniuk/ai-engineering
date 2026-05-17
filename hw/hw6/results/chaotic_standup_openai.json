@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "provider": "openai",
+    "valid_json": true,
+    "latency_seconds": 4.147290334105492,
+    "input_tokens": 603,
+    "output_tokens": 202
+  },
+  "metrics": {
+    "tasks_found": 3,
+    "tasks_total": 4,
+    "hallucinated_owners": 0,
+    "decisions_found": 1,
+    "decisions_total": 1
+  },
+  "result": {
+    "summary": "Було вирішено, що мобільну версію поки не розробляємо, фокусуючись на десктопі.",
+    "tasks": [
+      {
+        "owner": "Іван",
+        "task": "Завершити валідацію форми логіну",
+        "deadline": "2023-05-18"
+      },
+      {
+        "owner": "Мартин",
+        "task": "Налаштувати Sentry на staging",
+        "deadline": null
+      },
+      {
+        "owner": "Олена",
+        "task": "Взяти інтеграцію зі Stripe після повернення з відпустки",
+        "deadline": "2023-05-31"
+      }
+    ],
+    "decisions": [
+      "Мобільну версію поки не робимо, фокусуємось на десктопі."
+    ]
+  },
+  "raw": null
+}

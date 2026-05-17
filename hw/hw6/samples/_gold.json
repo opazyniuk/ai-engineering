@@ -1,0 +1,34 @@
+{
+  "simple_meeting": {
+    "tasks": [
+      {"owner": "Іван", "task_keywords": ["UI", "прототип", "Figma"], "deadline": "2026-05-15"},
+      {"owner": "Мартин", "task_keywords": ["REST", "API", "метрик"], "deadline": "2026-05-20"},
+      {"owner": "Анна", "task_keywords": ["спеку", "вимоги", "маркетингу"], "deadline": "2026-05-14"}
+    ],
+    "valid_owners": ["Іван", "Мартин", "Анна"],
+    "decisions_count": 2,
+    "decision_keywords": [["React", "frontend"], ["code review", "merge"]]
+  },
+  "chaotic_standup": {
+    "tasks": [
+      {"owner": "Іван", "task_keywords": ["валідац", "логін"], "deadline": "2026-05-18"},
+      {"owner": "Мартин", "task_keywords": ["черг", "повідомлен"], "deadline": "2026-05-20"},
+      {"owner": "Олена", "task_keywords": ["Stripe", "інтеграц"], "deadline": null},
+      {"owner": "Мартин", "task_keywords": ["Sentry", "staging"], "deadline": null}
+    ],
+    "valid_owners": ["Іван", "Мартин", "Олена"],
+    "decisions_count": 1,
+    "decision_keywords": [["мобільн", "десктоп"]]
+  },
+  "technical_sync": {
+    "tasks": [
+      {"owner": "Юрій", "task_keywords": ["OpenAPI", "REST"], "deadline": "2026-05-28"},
+      {"owner": "Софія", "task_keywords": ["Prometheus", "alert", "p99"], "deadline": "2026-05-22"},
+      {"owner": "Софія", "task_keywords": ["реплік", "k8s"], "deadline": null},
+      {"owner": "Дмитро", "task_keywords": ["distroless", "Docker"], "deadline": "2026-05-25"}
+    ],
+    "valid_owners": ["Юрій", "Софія", "Дмитро", "Тарас"],
+    "decisions_count": 3,
+    "decision_keywords": [["JWT"], ["SLO", "99.95"], ["terraform", "approver"]]
+  }
+}

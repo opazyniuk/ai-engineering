@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "provider": "ollama",
+    "valid_json": true,
+    "latency_seconds": 12.87510041706264,
+    "input_tokens": 573,
+    "output_tokens": 369
+  },
+  "metrics": {
+    "tasks_found": 3,
+    "tasks_total": 4,
+    "hallucinated_owners": 0,
+    "decisions_found": 3,
+    "decisions_total": 3
+  },
+  "result": {
+    "summary": "Вирішено використовувати JWT-авторизацію для всіх нових сервісів, deprecated кастомні токени, SLO на платформі — 99.95% доступності, p99 < 500ms.",
+    "tasks": [
+      {
+        "owner": "Тарас",
+        "task": "закрити план міграції payment-сервісу з gRPC на REST та обговорити capacity на Q3",
+        "deadline": null
+      },
+      {
+        "owner": "Юрій",
+        "task": "підготувати OpenAPI-специфікацію для нових REST-ендпоінтів до 28 травня",
+        "deadline": "2026-05-28"
+      },
+      {
+        "owner": "Софія",
+        "task": "налаштувати Prometheus alert на p99 latency понад 500ms для payment-сервісу до 22 травня",
+        "deadline": "2026-05-22"
+      },
+      {
+        "owner": "Дмитро",
+        "task": "перепакувати Docker-образи на distroless base, щоб зменшити attack surface, дедлайн 2026-05-25",
+        "deadline": "2026-05-25"
+      }
+    ],
+    "decisions": [
+      "Всі нові сервіси стартують з JWT-авторизацією, кастомні токени deprecated.",
+      "SLO на платформі — 99.95% доступності, p99 < 500ms.",
+      "Code review для terraform-змін NEEDS TWO approver-ів, не одного."
+    ]
+  },
+  "raw": null
+}

@@ -1,0 +1,7 @@
+dataset,provider,valid_json,tasks,halluc_owners,decisions,in_tok,out_tok,total_tok,cost_usd,latency_s
+simple_meeting,ollama,✅,3/3,0,0/2,358,230,588,0.0,8.26
+simple_meeting,openai,✅,3/3,0,2/2,340,188,528,0.000164,4.76
+chaotic_standup,ollama,✅,1/4,0,1/1,612,167,779,0.0,6.17
+chaotic_standup,openai,✅,3/4,0,1/1,603,202,805,0.000212,4.15
+technical_sync,ollama,✅,3/4,0,3/3,573,369,942,0.0,12.88
+technical_sync,openai,✅,4/4,0,3/3,555,318,873,0.000274,7.08
