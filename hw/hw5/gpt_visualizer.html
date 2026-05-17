@@ -1,0 +1,2312 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Як працює GPT — крок за кроком</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #1a1a2e; color: #e0e0e0; min-height: 100vh;
+  overflow-x: hidden;
+}
+h1 { text-align: center; padding: 24px 0 8px; font-size: 2em; color: #fff; letter-spacing: -1px; }
+.subtitle { text-align: center; color: #888; font-size: 0.95em; margin-bottom: 20px; }
+
+/* Navigation */
+.nav { display: flex; justify-content: center; gap: 0; flex-wrap: wrap; padding: 0 16px 20px; align-items: stretch; }
+.nav-group {
+  display: flex; gap: 4px; padding: 6px 8px; border-radius: 10px; align-items: center;
+  margin: 0 4px;
+}
+.nav-group.group-prep { background: rgba(79,195,247,0.08); border: 1px solid rgba(79,195,247,0.2); }
+.nav-group.group-transformer { background: rgba(76,175,80,0.08); border: 1px solid rgba(76,175,80,0.2); }
+.nav-group.group-output { background: rgba(255,152,0,0.08); border: 1px solid rgba(255,152,0,0.2); }
+.nav-group-label {
+  font-size: 0.65em; text-transform: uppercase; letter-spacing: 1px;
+  writing-mode: vertical-rl; text-orientation: mixed; padding: 0 4px 0 0;
+  font-weight: bold;
+}
+.nav-group.group-prep .nav-group-label { color: #4fc3f7; }
+.nav-group.group-transformer .nav-group-label { color: #4caf50; }
+.nav-group.group-output .nav-group-label { color: #ff9800; }
+.nav button {
+  padding: 6px 10px; border: 2px solid #333; border-radius: 8px;
+  background: #16213e; color: #aaa; cursor: pointer; font-size: 0.78em;
+  transition: all 0.3s; white-space: nowrap;
+}
+.nav button:hover { border-color: #555; color: #fff; }
+.nav button.active { border-color: #4fc3f7; color: #4fc3f7; background: #1a2a4a; }
+.nav-group.group-transformer button.active { border-color: #4caf50; color: #4caf50; background: #1a2e1a; }
+.nav-group.group-output button.active { border-color: #ff9800; color: #ff9800; background: #2e2a1a; }
+
+/* Step container */
+.step { display: none; max-width: 1000px; margin: 0 auto; padding: 0 24px 40px; }
+.step.visible { display: block; animation: fadeIn 0.5s ease; }
+.step-title { font-size: 1.5em; color: #4fc3f7; margin-bottom: 12px; }
+.explanation {
+  background: #16213e; border-left: 4px solid #4fc3f7; border-radius: 0 8px 8px 0;
+  padding: 16px 20px; margin: 20px 0; line-height: 1.7; font-size: 1.05em;
+}
+.explanation strong { color: #4fc3f7; }
+
+/* Next button */
+.next-btn {
+  display: block; margin: 30px auto 0; padding: 14px 40px;
+  background: linear-gradient(135deg, #4fc3f7, #0288d1); color: #fff;
+  border: none; border-radius: 8px; font-size: 1.1em; cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.next-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(79,195,247,0.4); }
+
+/* ---- Step 1: Tokenization ---- */
+.token-input { width: 100%; padding: 12px; font-size: 1.2em; border-radius: 8px;
+  border: 2px solid #333; background: #0f3460; color: #fff; margin-bottom: 20px; }
+.token-input:focus { outline: none; border-color: #4fc3f7; }
+.tokens-row { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; min-height: 80px; }
+.token-box {
+  display: flex; flex-direction: column; align-items: center; padding: 8px 6px;
+  border: 2px solid #4fc3f7; border-radius: 8px; background: #16213e;
+  opacity: 0; animation: popIn 0.3s ease forwards;
+  min-width: 40px;
+}
+.token-char { font-size: 1.4em; color: #fff; font-family: monospace; min-height: 1.4em; }
+.token-id { font-size: 0.75em; color: #4fc3f7; margin-top: 4px; font-family: monospace; }
+.arrow-down { text-align: center; font-size: 2em; color: #4fc3f7; margin: 12px 0; }
+
+/* ---- Step 2: Embeddings ---- */
+.emb-section { margin: 16px 0; }
+.emb-label { font-size: 0.9em; color: #888; margin-bottom: 8px; text-align: center; }
+.emb-row { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; min-height: 70px; }
+.emb-bar {
+  width: 38px; height: 60px; border-radius: 4px; position: relative;
+  opacity: 0; animation: growUp 0.4s ease forwards;
+}
+.emb-bar .label { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+  font-size: 0.7em; color: #888; white-space: nowrap; }
+.plus-sign { text-align: center; font-size: 2.5em; color: #e91e63; margin: 8px 0; }
+.equals-sign { text-align: center; font-size: 2.5em; color: #4caf50; margin: 8px 0; }
+
+/* ---- Step 3: Attention ---- */
+.attn-container { position: relative; padding-top: 20px; }
+.attn-tokens { display: flex; gap: 8px; justify-content: center; position: relative; z-index: 2; }
+.attn-token {
+  padding: 10px 8px; background: #16213e; border: 2px solid #555; border-radius: 8px;
+  text-align: center; cursor: pointer; transition: all 0.3s; min-width: 44px;
+  font-family: monospace; font-size: 1.2em;
+}
+.attn-token:hover, .attn-token.highlighted { border-color: #4caf50; background: #1a3a2e; color: #4caf50; }
+.qkv-labels { display: flex; justify-content: center; gap: 40px; margin: 16px 0; }
+.qkv-label { padding: 6px 16px; border-radius: 20px; font-size: 0.9em; }
+.qkv-q { background: #1a3a5e; color: #64b5f6; border: 1px solid #64b5f6; }
+.qkv-k { background: #3a1a3e; color: #ce93d8; border: 1px solid #ce93d8; }
+.qkv-v { background: #1a3a2e; color: #81c784; border: 1px solid #81c784; }
+.attn-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+.attn-line { stroke: #4caf50; fill: none; opacity: 0.6; transition: opacity 0.3s, stroke-width 0.3s; }
+.attn-line.dimmed { opacity: 0.08; }
+.attn-line.bright { opacity: 0.9; }
+
+/* ---- Step 4: Causal Mask ---- */
+.mask-grid {
+  display: inline-grid; gap: 3px; margin: 20px auto;
+  justify-content: center;
+}
+.mask-cell {
+  width: 48px; height: 48px; border-radius: 6px; display: flex; align-items: center;
+  justify-content: center; font-size: 0.85em; font-weight: bold;
+  opacity: 0; transition: background 0.3s;
+}
+.mask-cell.allowed { background: #1b5e20; color: #4caf50; }
+.mask-cell.blocked { background: #4a1515; color: #ef5350; }
+.mask-cell.diagonal { box-shadow: 0 0 8px rgba(76,175,80,0.5); }
+.mask-labels-row { display: flex; justify-content: center; gap: 3px; margin-bottom: 6px; }
+.mask-labels-col { display: flex; flex-direction: column; gap: 3px; margin-right: 6px;
+  justify-content: flex-start; align-items: center; }
+.mask-label { width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+  font-family: monospace; font-size: 1.1em; color: #888; }
+.mask-wrapper { display: flex; justify-content: center; align-items: flex-start; }
+
+/* ---- Step 5: Transformer Block ---- */
+.block-flow { display: flex; flex-direction: column; align-items: center; gap: 0; margin: 20px auto; }
+.block-node {
+  padding: 14px 28px; border-radius: 10px; text-align: center; font-size: 1em;
+  opacity: 0.3; transition: all 0.5s; position: relative; min-width: 220px;
+}
+.block-node.active { opacity: 1; transform: scale(1.05); }
+.block-node.input-node { background: #1a3a5e; border: 2px solid #4fc3f7; color: #4fc3f7; }
+.block-node.ln-node { background: #2a2a3e; border: 2px solid #888; color: #ccc; }
+.block-node.attn-node { background: #1a3a2e; border: 2px solid #4caf50; color: #4caf50; }
+.block-node.mlp-node { background: #3a2a1e; border: 2px solid #ff9800; color: #ff9800; }
+.block-node.residual-node { background: #3a1a3e; border: 2px solid #e91e63; color: #e91e63; }
+.block-node.output-node { background: #1a3a5e; border: 2px solid #4fc3f7; color: #4fc3f7; }
+.block-arrow { font-size: 1.8em; color: #555; line-height: 1; }
+.block-arrow.residual-arrow { color: #e91e63; font-size: 1.2em; }
+.blocks-repeat { text-align: center; margin-top: 16px; padding: 12px 24px;
+  border: 2px dashed #555; border-radius: 10px; color: #888; font-size: 0.95em; }
+.block-detail { font-size: 0.75em; color: #888; margin-top: 4px; }
+
+/* ---- Step 6: Generation ---- */
+.gen-prompt { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin: 16px 0; min-height: 50px; }
+.gen-char {
+  padding: 8px 6px; background: #16213e; border: 2px solid #333; border-radius: 6px;
+  font-family: monospace; font-size: 1.3em; min-width: 36px; text-align: center;
+}
+.gen-char.new { border-color: #4caf50; color: #4caf50; animation: popIn 0.3s ease; }
+.gen-char.processing { border-color: #ff9800; animation: pulse 0.6s infinite; }
+.prob-bars { margin: 20px auto; max-width: 400px; }
+.prob-bar-row { display: flex; align-items: center; margin: 6px 0; gap: 10px; }
+.prob-char { font-family: monospace; font-size: 1.2em; min-width: 30px; text-align: center; }
+.prob-track { flex: 1; height: 28px; background: #0f3460; border-radius: 6px; overflow: hidden; }
+.prob-fill { height: 100%; border-radius: 6px; transition: width 0.5s ease;
+  display: flex; align-items: center; padding-left: 8px; font-size: 0.85em; color: #fff; }
+.prob-fill.winner { background: linear-gradient(90deg, #4caf50, #2e7d32); }
+.prob-fill.other { background: linear-gradient(90deg, #37474f, #263238); }
+.temp-control { text-align: center; margin: 20px 0; }
+.temp-slider { width: 300px; margin: 8px 0; accent-color: #4fc3f7; }
+.temp-value { color: #4fc3f7; font-size: 1.2em; font-weight: bold; }
+.gen-controls { display: flex; justify-content: center; gap: 12px; margin: 16px 0; }
+.gen-btn { padding: 10px 24px; border: 2px solid #4caf50; border-radius: 8px;
+  background: transparent; color: #4caf50; cursor: pointer; font-size: 1em; transition: all 0.3s; }
+.gen-btn:hover { background: #1a3a2e; }
+.gen-btn.reset { border-color: #ef5350; color: #ef5350; }
+.gen-btn.reset:hover { background: #3a1a1a; }
+
+/* ---- Data Output Panels ---- */
+.data-output {
+  background: #0d1b2a; border: 1px solid #333; border-radius: 10px;
+  padding: 16px; margin: 16px 0; overflow-x: auto;
+}
+.data-output .do-title {
+  font-size: 0.85em; color: #4fc3f7; text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+}
+.data-output .do-title .shape-badge {
+  background: #1a2a4a; border: 1px solid #4fc3f7; border-radius: 12px;
+  padding: 2px 10px; font-size: 0.9em; font-family: monospace; color: #4fc3f7;
+}
+.vec-row { display: flex; gap: 2px; margin: 4px 0; align-items: center; flex-wrap: nowrap; }
+.vec-cell {
+  min-width: 36px; height: 28px; border-radius: 3px; display: flex; align-items: center;
+  justify-content: center; font-family: monospace; font-size: 0.72em; color: #fff;
+  transition: all 0.3s;
+}
+.vec-label { min-width: 30px; font-family: monospace; font-size: 0.8em; color: #888;
+  text-align: right; padding-right: 6px; flex-shrink: 0; }
+.vec-dots { color: #555; font-size: 0.8em; padding: 0 4px; }
+.matrix-container { overflow-x: auto; }
+.matrix-table { border-collapse: collapse; margin: 4px 0; }
+.matrix-table td {
+  min-width: 40px; height: 32px; text-align: center; font-family: monospace; font-size: 0.75em;
+  border-radius: 3px; padding: 2px 4px;
+}
+.matrix-table .header-cell { color: #888; font-size: 0.7em; background: none; }
+.logits-row { display: flex; gap: 3px; flex-wrap: wrap; margin: 6px 0; }
+.logit-chip {
+  padding: 4px 8px; border-radius: 6px; font-family: monospace; font-size: 0.8em;
+  display: flex; gap: 6px; align-items: center;
+}
+.logit-char { font-size: 1.1em; }
+.logit-val { color: #aaa; font-size: 0.85em; }
+
+/* QKV interactive panel */
+.qkv-step { margin: 12px 0; padding: 12px; border-radius: 8px; background: rgba(255,255,255,0.02); }
+.qkv-step-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.qkv-step-num {
+  width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 0.8em; font-weight: bold; flex-shrink: 0;
+}
+.qkv-step-title { font-size: 0.95em; }
+.qkv-arrow-eq { text-align: center; font-size: 1.5em; color: #555; margin: 4px 0; }
+.score-pills { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0; }
+.score-pill {
+  padding: 5px 10px; border-radius: 6px; font-family: monospace; font-size: 0.85em;
+  display: flex; align-items: center; gap: 6px; border: 1px solid #333;
+}
+.score-pill .sp-char { font-size: 1em; }
+.score-pill .sp-val { font-size: 0.85em; }
+.score-pill.masked { opacity: 0.3; text-decoration: line-through; }
+.score-pill.selected { border-color: #4caf50; background: rgba(76,175,80,0.15); }
+
+/* Multi-head */
+.mha-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; }
+@media (max-width: 700px) { .mha-grid { grid-template-columns: repeat(2, 1fr); } }
+.mha-head {
+  background: #0d1b2a; border: 2px solid #333; border-radius: 10px; padding: 12px;
+  transition: all 0.3s; cursor: default;
+}
+.mha-head:hover { border-color: #4fc3f7; }
+.mha-head-title { font-size: 0.9em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.mha-head-num {
+  width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-size: 0.75em; font-weight: bold; flex-shrink: 0;
+}
+.mha-head-desc { color: #888; font-size: 0.8em; margin-bottom: 8px; }
+.mha-mini-matrix { display: grid; gap: 2px; }
+.mha-mini-cell {
+  width: 100%; aspect-ratio: 1; border-radius: 2px; display: flex; align-items: center;
+  justify-content: center; font-size: 0.6em; color: rgba(255,255,255,0.5);
+}
+.mha-concat-visual { display: flex; align-items: center; justify-content: center; gap: 4px;
+  margin: 16px 0; flex-wrap: wrap; }
+.mha-chunk {
+  height: 40px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  font-size: 0.75em; color: #fff; padding: 0 8px;
+}
+.mha-plus { font-size: 1.5em; color: #555; }
+
+/* Code blocks */
+.code-block {
+  background: #0a0e1a; border: 1px solid #333; border-radius: 10px;
+  margin: 16px 0; overflow: hidden;
+}
+.code-block-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 14px; background: rgba(255,255,255,0.03); border-bottom: 1px solid #333;
+}
+.code-block-title { font-size: 0.8em; color: #4fc3f7; font-family: monospace; }
+.code-block-file { font-size: 0.75em; color: #666; }
+.copy-btn {
+  padding: 4px 12px; border: 1px solid #555; border-radius: 5px;
+  background: transparent; color: #aaa; cursor: pointer; font-size: 0.75em;
+  transition: all 0.2s;
+}
+.copy-btn:hover { border-color: #4caf50; color: #4caf50; }
+.copy-btn.copied { border-color: #4caf50; color: #4caf50; }
+.code-block pre {
+  margin: 0; padding: 12px 14px; overflow-x: auto;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8em; line-height: 1.5; color: #ccc; white-space: pre;
+}
+.code-block .kw { color: #c792ea; }
+.code-block .fn { color: #82aaff; }
+.code-block .str { color: #c3e88d; }
+.code-block .num { color: #f78c6c; }
+.code-block .cm { color: #546e7a; }
+.code-block .op { color: #89ddff; }
+
+/* Config group */
+.nav-group.group-config { background: rgba(206,147,216,0.08); border: 1px solid rgba(206,147,216,0.2); }
+.nav-group.group-config .nav-group-label { color: #ce93d8; }
+.nav-group.group-config button.active { border-color: #ce93d8; color: #ce93d8; background: #2a1a2e; }
+
+/* Weight matrix visualization */
+.weight-viz { margin: 16px 0; }
+.weight-viz-title { font-size: 0.85em; color: #888; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+.weight-grid {
+  display: inline-grid; gap: 1px; border-radius: 6px; overflow: hidden;
+  border: 1px solid #333; margin: 4px 0;
+}
+.weight-cell {
+  width: 14px; height: 14px; transition: background 0.8s ease;
+}
+.weight-label { font-family: monospace; font-size: 0.7em; color: #666; margin-top: 2px; text-align: center; }
+.weight-dims { font-family: monospace; font-size: 0.75em; color: #555; }
+.train-btn {
+  padding: 8px 20px; border: 2px solid #ff9800; border-radius: 8px;
+  background: transparent; color: #ff9800; cursor: pointer; font-size: 0.9em;
+  transition: all 0.3s; margin: 8px 4px;
+}
+.train-btn:hover { background: #2a2a1e; }
+.train-status { font-size: 0.85em; color: #888; margin: 8px 0; }
+.train-status .loss-val { color: #4caf50; font-family: monospace; }
+.weight-legend { display: flex; align-items: center; gap: 8px; margin: 8px 0; font-size: 0.75em; color: #888; }
+.weight-legend-bar { width: 100px; height: 12px; border-radius: 3px;
+  background: linear-gradient(90deg, #1565c0, #0d1b2a, #e65100); }
+
+/* Animations */
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes popIn { from { opacity: 0; transform: scale(0.7); } to { opacity: 1; transform: scale(1); } }
+@keyframes growUp { from { opacity: 0; transform: scaleY(0); } to { opacity: 1; transform: scaleY(1); } }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+@keyframes flowDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+
+<h1>Як працює GPT — крок за кроком</h1>
+<p class="subtitle">Інтерактивна візуалізація архітектури трансформера</p>
+
+<div class="nav" id="nav"></div>
+
+<!-- Step 0: Config -->
+<div class="step" id="step1">
+  <h2 class="step-title">0. Конфігурація моделі</h2>
+  <p style="color:#aaa;margin-bottom:16px">Ці параметри визначають розмір і поведінку моделі. Змінюй слайдери, щоб побачити наслідки:</p>
+
+  <div id="configSliders"></div>
+  <div class="data-output" id="configSummary"></div>
+
+  <div class="explanation">
+    <strong>Що відбувається при зміні параметрів:</strong><br><br>
+    <strong>Більше N_EMBED / N_HEAD / N_LAYER</strong> = модель розумніша, але:<br>
+    — більше пам'яті (може не влізти в GPU)<br>
+    — повільніше тренування і генерація<br>
+    — потребує більше даних (інакше overfitting)<br><br>
+    <strong>BLOCK_SIZE</strong> = скільки символів модель "бачить" одночасно. 128 = модель не знає що було 129 символів тому.<br>
+    GPT-4 має контекст ~128,000 токенів. Наша модель — 128 символів.<br><br>
+    <strong>DROPOUT</strong> = при тренуванні випадково "вимикає" частину нейронів. Захист від зазубрювання.<br>
+    0.0 = немає захисту (overfitting). 0.5 = занадто агресивно (модель не вчиться).<br><br>
+    <strong>LR (Learning Rate)</strong> = наскільки сильно оновлювати ваги на кожному кроці.<br>
+    Занадто великий = тренування "стрибає" і не збігається. Занадто маленький = вчиться тижнями.
+  </div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">Конфігурація</span><span class="code-block-file">nano_gpt.py</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre>BLOCK_SIZE = 128    # довжина контексту
+BATCH_SIZE = 64     # розмір батчу
+N_EMBED    = 192    # розмірність вектора
+N_HEAD     = 6      # кількість attention-голів
+N_LAYER    = 4      # кількість transformer-блоків
+DROPOUT    = 0.2    # регуляризація
+LR         = 3e-4   # learning rate
+MAX_ITERS  = 1500   # кроків тренування</pre></div>
+  <button class="next-btn" onclick="goStep(2)">Далі: Токенізація →</button>
+</div>
+
+<!-- Step 1: Tokenization -->
+<div class="step" id="step2">
+  <h2 class="step-title">1. Токенізація</h2>
+  <input class="token-input" id="tokenInput" type="text" value="hello" placeholder="Введіть текст..." maxlength="30">
+  <div class="arrow-down">↓</div>
+  <div class="tokens-row" id="tokensRow"></div>
+  <div class="data-output" id="tokenDataOutput"></div>
+  <div class="explanation">
+    <strong>Що відбувається:</strong> Модель не розуміє букви — вона працює з числами.
+    Кожен символ отримує унікальний індекс зі словника (vocabulary).<br><br>
+    <strong>На прикладі "hello":</strong> кожна буква стає числом — h→7, e→4, l→11, l→11, o→14.
+    Зверни увагу: обидві "l" отримують однаковий індекс (11) — модель поки не знає що вони на різних позиціях. Це виправиться на наступному кроці.<br><br>
+    <strong>Кожна буква = окремий токен.</strong> Це означає, що слово "hello" — це 5 незалежних одиниць,
+    кожна проходить через весь transformer окремо (свій embedding, свій Q/K/V, свій MLP).
+    Вони "спілкуються" тільки в одному місці — Self-Attention.
+  </div>
+
+  <div class="data-output" style="border-left-color:#ff9800;border-left:3px solid #ff9800">
+    <div class="do-title" style="color:#ff9800">Порівняння: наша nano-GPT vs реальний GPT-4</div>
+    <table style="width:100%;border-collapse:collapse;margin:10px 0">
+      <tr style="border-bottom:1px solid #333">
+        <td style="padding:8px;color:#888;width:30%"></td>
+        <td style="padding:8px;color:#4fc3f7;text-align:center"><strong>nano-GPT (char-level)</strong></td>
+        <td style="padding:8px;color:#4caf50;text-align:center"><strong>GPT-4 (BPE)</strong></td>
+      </tr>
+      <tr style="border-bottom:1px solid #222">
+        <td style="padding:8px;color:#888">"hello"</td>
+        <td style="padding:8px;text-align:center;font-family:monospace">
+          <span style="border:1px solid #4fc3f7;border-radius:4px;padding:2px 6px;margin:0 1px">h</span>
+          <span style="border:1px solid #4fc3f7;border-radius:4px;padding:2px 6px;margin:0 1px">e</span>
+          <span style="border:1px solid #4fc3f7;border-radius:4px;padding:2px 6px;margin:0 1px">l</span>
+          <span style="border:1px solid #4fc3f7;border-radius:4px;padding:2px 6px;margin:0 1px">l</span>
+          <span style="border:1px solid #4fc3f7;border-radius:4px;padding:2px 6px;margin:0 1px">o</span>
+          <span style="color:#888;font-size:0.8em"> = 5 токенів</span>
+        </td>
+        <td style="padding:8px;text-align:center;font-family:monospace">
+          <span style="border:1px solid #4caf50;border-radius:4px;padding:2px 10px">hello</span>
+          <span style="color:#888;font-size:0.8em"> = 1 токен</span>
+        </td>
+      </tr>
+      <tr style="border-bottom:1px solid #222">
+        <td style="padding:8px;color:#888">"hello world"</td>
+        <td style="padding:8px;text-align:center;font-family:monospace;font-size:0.85em">
+          <span style="color:#4fc3f7">h e l l o ␣ w o r l d</span>
+          <span style="color:#888;font-size:0.85em"> = 11 токенів</span>
+        </td>
+        <td style="padding:8px;text-align:center;font-family:monospace">
+          <span style="border:1px solid #4caf50;border-radius:4px;padding:2px 10px;margin:0 2px">hello</span>
+          <span style="border:1px solid #4caf50;border-radius:4px;padding:2px 10px;margin:0 2px">␣world</span>
+          <span style="color:#888;font-size:0.8em"> = 2 токени</span>
+        </td>
+      </tr>
+      <tr style="border-bottom:1px solid #222">
+        <td style="padding:8px;color:#888">"привіт"</td>
+        <td style="padding:8px;text-align:center;font-family:monospace;font-size:0.85em">
+          <span style="color:#4fc3f7">п р и в і т</span>
+          <span style="color:#888;font-size:0.85em"> = 6 токенів</span>
+        </td>
+        <td style="padding:8px;text-align:center;font-family:monospace;font-size:0.85em">
+          <span style="border:1px solid #4caf50;border-radius:4px;padding:2px 8px;margin:0 2px">при</span>
+          <span style="border:1px solid #4caf50;border-radius:4px;padding:2px 8px;margin:0 2px">ві</span>
+          <span style="border:1px solid #4caf50;border-radius:4px;padding:2px 8px;margin:0 2px">т</span>
+          <span style="color:#888;font-size:0.8em"> = 3 токени</span>
+        </td>
+      </tr>
+      <tr style="border-bottom:1px solid #222">
+        <td style="padding:8px;color:#888">Словник</td>
+        <td style="padding:8px;text-align:center;color:#4fc3f7">~65 символів</td>
+        <td style="padding:8px;text-align:center;color:#4caf50">~100,000 subwords</td>
+      </tr>
+      <tr>
+        <td style="padding:8px;color:#888">Обчислень на "hello world"</td>
+        <td style="padding:8px;text-align:center;color:#ef5350">11 × весь pipeline</td>
+        <td style="padding:8px;text-align:center;color:#4caf50">2 × весь pipeline</td>
+      </tr>
+    </table>
+    <div style="color:#888;font-size:0.85em;margin-top:8px">
+      <strong>Висновок:</strong> BPE ефективніший — менше токенів = менше обчислень, кожен токен несе більше сенсу.
+      Саме тому API рахує ціну в токенах, а не в словах чи символах.
+      Наша char-level модель простіша для розуміння — але принцип роботи той самий.
+    </div>
+  </div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">Токенізація</span><span class="code-block-file">nano_gpt.py</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre>chars = sorted(set(TEXT))                       # унікальні символи
+vocab_size = len(chars)                          # розмір словника
+stoi = {c: i for i, c in enumerate(chars)}       # символ → число
+itos = {i: c for i, c in enumerate(chars)}       # число → символ
+encode = lambda s: [stoi[c] for c in s]          # "hello" → [7, 4, 11, 11, 14]
+decode = lambda ids: "".join(itos[i] for i in ids)
+
+data = torch.tensor(encode(TEXT), dtype=torch.long)
+train_data, val_data = data[:int(0.9*len(data))], data[int(0.9*len(data)):]
+
+def get_batch(split):
+    d = train_data if split == "train" else val_data
+    ix = torch.randint(len(d) - BLOCK_SIZE - 1, (BATCH_SIZE,))
+    x = torch.stack([d[i : i+BLOCK_SIZE] for i in ix])       # вхід
+    y = torch.stack([d[i+1 : i+1+BLOCK_SIZE] for i in ix])   # ціль (зсув на 1)
+    return x.to(device), y.to(device)</pre></div>
+  <button class="next-btn" onclick="goStep(3)">Далі: Embeddings →</button>
+</div>
+
+<!-- Step 2: Embeddings -->
+<div class="step" id="step3">
+  <h2 class="step-title">2. Embedding = Token + Position</h2>
+  <div class="emb-section">
+    <div class="emb-label">Token Embedding — хто цей символ?</div>
+    <div class="emb-row" id="tokEmbs"></div>
+  </div>
+  <div class="plus-sign">+</div>
+  <div class="emb-section">
+    <div class="emb-label">Position Embedding — де він стоїть?</div>
+    <div class="emb-row" id="posEmbs"></div>
+  </div>
+  <div class="equals-sign">=</div>
+  <div class="emb-section">
+    <div class="emb-label">Combined Embedding — вхід у трансформер</div>
+    <div class="emb-row" id="combEmbs"></div>
+  </div>
+  <div class="data-output" id="embDataOutput"></div>
+  <div class="explanation">
+    <strong>Що відбувається:</strong> Кожен токен (число) перетворюється на вектор із 192 чисел —
+    це його "координати" в просторі значень.<br><br>
+    <strong>На прикладі "hello":</strong><br>
+    — "h" (ID 7) → шукаємо 7-й рядок у таблиці token embedding → вектор [0.12, -0.34, ...] (192 числа)<br>
+    — Додаємо position embedding для позиції 0 → вектор [0.01, 0.05, ...]<br>
+    — Результат: [0.13, -0.29, ...] — тепер модель знає і ХТО цей символ, і ДЕ він стоїть<br>
+    — Дві "l" мають однаковий token embedding, але різний position embedding — тому вони різні!<br><br>
+    <strong>Навіщо позиція?</strong> Self-attention — це операція над множиною, вона не розрізняє порядок.
+    Без position embedding "hello" і "olleh" виглядають однаково.<br><br>
+    <strong>Чому сума, а не конкатенація?</strong> Конкатенація подвоїла б розмірність (384 замість 192).
+    Сума працює, бо модель вчиться кодувати ідентичність і позицію в ортогональних підпросторах.
+  </div>
+  <div class="data-output" id="step2weights"></div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">Embeddings (частина NanoGPT)</span><span class="code-block-file">nano_gpt.py</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre># В __init__:
+self.tok_emb = nn.Embedding(vocab_size, N_EMBED)  # token ID → вектор 192d
+self.pos_emb = nn.Embedding(BLOCK_SIZE, N_EMBED)  # позиція → вектор 192d
+
+# В forward:
+pos = torch.arange(T, device=idx.device)           # [0, 1, 2, ..., T-1]
+x = self.tok_emb(idx) + self.pos_emb(pos)          # (B, T, 192)</pre></div>
+  <button class="next-btn" onclick="goStep(4)">Далі: Self-Attention →</button>
+</div>
+
+<!-- Step 3: Attention -->
+<div class="step" id="step4">
+  <h2 class="step-title">3. Self-Attention</h2>
+
+  <!-- Token selector -->
+  <p style="text-align:center;color:#aaa;margin-bottom:8px">Клікни на токен, щоб побачити як він рахує attention:</p>
+  <div class="attn-container" id="attnContainer">
+    <svg class="attn-svg" id="attnSvg"></svg>
+    <div class="attn-tokens" id="attnTokens"></div>
+  </div>
+
+  <!-- QKV interactive breakdown -->
+  <div class="data-output" id="attnQKVPanel" style="display:none">
+    <!-- Filled dynamically -->
+  </div>
+
+  <!-- Attention matrix -->
+  <div class="data-output" id="attnDataOutput"></div>
+
+  <div class="explanation">
+    <strong>На прикладі "hello" — що робить токен "o" (остання позиція):</strong><br>
+    1. "o" генерує свій <span style="color:#64b5f6">Q</span> (Query): "я — буква 'o' в кінці слова, що мені потрібно?"<br>
+    2. Кожен токен генерує <span style="color:#ce93d8">K</span> (Key): h каже "я — початок слова", l каже "я — повтор"<br>
+    3. "o" рахує Q·K з кожним: h→5%, e→8%, l→3%, l→6%, o→78% (сам на себе — найбільше)<br>
+    4. Causal mask: "o" бачить h, e, l, l, o — але НЕ бачить нічого після себе<br>
+    5. Зважена сума V: output = 5%·V<sub>h</sub> + 8%·V<sub>e</sub> + 3%·V<sub>l</sub> + 6%·V<sub>l</sub> + 78%·V<sub>o</sub><br>
+    6. Тепер "o" знає: "я останній у слові 'hello'" — це допоможе передбачити пробіл<br><br>
+    <strong>Алгоритм (формально):</strong> Q·K<sup>T</sup>/√dim → mask → softmax → ·V<br><br>
+    <strong>Чому O(n²)?</strong> Кожен токен рахує скалярний добуток з КОЖНИМ попереднім.
+    5 токенів = 15 добутків. 100k токенів = 10 мільярдів. Тому довгий контекст — дорогий.
+  </div>
+  <div class="data-output" id="step3weights"></div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">Self-Attention</span><span class="code-block-file">nano_gpt.py</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre>class CausalSelfAttention(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.qkv = nn.Linear(N_EMBED, 3 * N_EMBED)   # Q, K, V одним множенням
+        self.proj = nn.Linear(N_EMBED, N_EMBED)        # проєкція після concat голів
+        self.drop = nn.Dropout(DROPOUT)
+        self.register_buffer("mask",                    # causal mask
+            torch.tril(torch.ones(BLOCK_SIZE, BLOCK_SIZE))
+            .view(1, 1, BLOCK_SIZE, BLOCK_SIZE))
+
+    def forward(self, x):
+        B, T, C = x.shape
+        q, k, v = self.qkv(x).split(N_EMBED, dim=2)          # (B, T, 192) кожен
+
+        head_dim = C // N_HEAD                                  # 32
+        q = q.view(B, T, N_HEAD, head_dim).transpose(1, 2)    # (B, 6, T, 32)
+        k = k.view(B, T, N_HEAD, head_dim).transpose(1, 2)
+        v = v.view(B, T, N_HEAD, head_dim).transpose(1, 2)
+
+        att = (q @ k.transpose(-2, -1)) / math.sqrt(head_dim) # (B, 6, T, T)
+        att = att.masked_fill(self.mask[:,:,:T,:T] == 0, float("-inf"))
+        att = F.softmax(att, dim=-1)
+        att = self.drop(att)
+
+        y = att @ v                                             # (B, 6, T, 32)
+        y = y.transpose(1, 2).contiguous().view(B, T, C)      # (B, T, 192)
+        return self.proj(y)</pre></div>
+  <button class="next-btn" onclick="goStep(5)">Далі: Multi-Head Attention →</button>
+</div>
+
+<!-- Step 4: Multi-Head Attention -->
+<div class="step" id="step5">
+  <h2 class="step-title">4. Multi-Head Attention</h2>
+
+  <p style="text-align:center;color:#aaa;margin-bottom:12px">6 голів дивляться на текст ПАРАЛЕЛЬНО — кожна бачить "своє":</p>
+
+  <div id="mhaHeadsContainer"></div>
+
+  <div class="data-output" id="mhaDataOutput"></div>
+
+  <div class="explanation">
+    <strong>На прикладі "hello":</strong><br>
+    — Голова 1 (позиційна): "o" дивиться на "l" (попередній символ) — слідкує за порядком<br>
+    — Голова 2 (початок): "o" дивиться на "h" — пам'ятає початок слова<br>
+    — Голова 5 (схожість): "o" дивиться на "o" — знаходить повтори<br>
+    — Кожна голова бачить щось інше в тих самих 5 токенах!<br><br>
+    <strong>Як це працює з розмірностями:</strong><br>
+    — Embedding токена: 192 dim<br>
+    — Ділимо на 6 голів: кожна працює з 192/6 = <strong>32 dim</strong><br>
+    — Кожна голова рахує свій attention (Q·K→softmax→·V) на 32-dim векторах<br>
+    — Результати 6 голів конкатенуються: 6 × 32 = <strong>192 dim</strong> (повернулись до оригіналу!)<br>
+    — Фінальна проєкція W<sub>out</sub> змішує інформацію від усіх голів<br><br>
+    <strong>Аналогія:</strong> 6 людей читають "hello" — один дивиться на граматику,
+    інший на позицію букв, третій на повтори. Потім вони обговорюють і дають спільний висновок.
+  </div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">Multi-Head: розбивка і збірка</span><span class="code-block-file">nano_gpt.py → CausalSelfAttention.forward()</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre># Розбиваємо 192 dim на 6 голів по 32 dim
+head_dim = C // N_HEAD                                  # 192 / 6 = 32
+q = q.view(B, T, N_HEAD, head_dim).transpose(1, 2)    # (B, T, 192) → (B, 6, T, 32)
+k = k.view(B, T, N_HEAD, head_dim).transpose(1, 2)
+v = v.view(B, T, N_HEAD, head_dim).transpose(1, 2)
+
+# ... кожна голова рахує свій attention ...
+
+# Збираємо 6 голів назад
+y = y.transpose(1, 2).contiguous().view(B, T, C)      # (B, 6, T, 32) → (B, T, 192)
+return self.proj(y)                                     # проєкція змішує голови</pre></div>
+  <button class="next-btn" onclick="goStep(6)">Далі: Causal Mask →</button>
+</div>
+
+<!-- Step 5: Causal Mask -->
+<div class="step" id="step6">
+  <h2 class="step-title">5. Causal Mask</h2>
+  <div class="mask-wrapper" id="maskWrapper"></div>
+  <div class="explanation">
+    <strong>На прикладі "hello":</strong><br>
+    — "h" (позиція 0): бачить тільки себе → ✓✗✗✗✗<br>
+    — "e" (позиція 1): бачить h і себе → ✓✓✗✗✗<br>
+    — "o" (позиція 4): бачить h, e, l, l, o → ✓✓✓✓✓<br>
+    — Ніхто не бачить символи ПІСЛЯ себе — це і є "causal"<br><br>
+    <strong>Чому це критично?</strong> GPT навчений передбачати НАСТУПНИЙ символ, не знаючи що далі.
+    Якщо "o" побачить що після нього пробіл — навіщо йому вчитись? Він просто скопіює відповідь.
+    Маска змушує модель ДУМАТИ, а не списувати.<br><br>
+    <strong>GPT vs BERT:</strong> GPT використовує causal (трикутну) маску — бачить тільки минуле.
+    BERT бачить ВСЕ речення в обидва боки — тому він кращий для розуміння, але не вміє генерувати.
+  </div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">Causal Mask</span><span class="code-block-file">nano_gpt.py</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre># В __init__:
+self.register_buffer("mask",
+    torch.tril(torch.ones(BLOCK_SIZE, BLOCK_SIZE))
+    .view(1, 1, BLOCK_SIZE, BLOCK_SIZE))
+
+# В forward:
+att = att.masked_fill(self.mask[:,:,:T,:T] == 0, float("-inf"))
+# -inf після softmax стає 0 → нульова увага на майбутні позиції</pre></div>
+  <button class="next-btn" onclick="goStep(7)">Далі: LayerNorm →</button>
+</div>
+
+<!-- Step 6: LayerNorm -->
+<div class="step" id="step7">
+  <h2 class="step-title">6. LayerNorm</h2>
+
+  <div style="text-align:center;margin:20px 0">
+    <div style="display:inline-block;background:#2a2a3e;border:2px solid #888;border-radius:12px;padding:20px 40px">
+      <div style="font-size:1.3em;color:#ccc">LayerNorm</div>
+      <div style="color:#888;font-size:0.9em;margin-top:4px">нормалізація значень</div>
+    </div>
+  </div>
+
+  <div class="data-output">
+    <div class="do-title">Що робить LayerNorm</div>
+    <div style="color:#aaa;font-size:0.95em;line-height:1.7">
+      Бере вектор токена (192 числа) і нормалізує: <strong style="color:#fff">mean = 0, std = 1</strong>.<br>
+      Формула: <code style="color:#4fc3f7">output = (x - mean) / std * gamma + beta</code><br>
+      де gamma і beta — навчальні параметри (модель вчиться "де нормалізувати вільніше").
+    </div>
+  </div>
+
+  <div class="data-output">
+    <div class="do-title">На прикладі "hello" — вектор токена "o"</div>
+    <div style="margin:8px 0">
+      <span style="color:#888">До LayerNorm:</span>
+      <span style="color:#ff9800;font-family:monospace;font-size:0.85em"> [12.5, -3.2, 0.8, 45.1, -22.0, 1.1, ...] </span>
+      <span style="color:#666">← числа "розкидані"</span>
+    </div>
+    <div style="margin:8px 0">
+      <span style="color:#888">Після LayerNorm:</span>
+      <span style="color:#4caf50;font-family:monospace;font-size:0.85em"> [0.31, -0.15, 0.01, 1.42, -0.87, 0.02, ...] </span>
+      <span style="color:#666">← стабільний діапазон</span>
+    </div>
+  </div>
+
+  <div class="explanation">
+    <strong>Навіщо?</strong> Без нормалізації значення після кожного блоку ростуть або зменшуються.
+    Через 4 блоки числа можуть стати 10,000 або 0.0001 — softmax і градієнти ламаються.<br><br>
+    <strong>Де стоїть?</strong> Перед attention і перед MLP (pre-norm). Це стабілізує тренування.<br><br>
+    <strong>В коді:</strong> <code style="color:#4fc3f7">self.ln1 = nn.LayerNorm(N_EMBED)</code> — один рядок. Але без нього модель глибше 2-3 шарів не тренується.<br><br>
+    <strong>Аналогія:</strong> після кожної наради (attention) і кожного обдумування (MLP) — "перезавантаження",
+    щоб наступний раунд починав з чистого стану, а не з накопиченого шуму.
+  </div>
+  <div class="data-output" id="step6weights"></div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">LayerNorm</span><span class="code-block-file">nano_gpt.py → Block</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre># В __init__:
+self.ln1 = nn.LayerNorm(N_EMBED)    # 192 параметри gamma + 192 beta
+self.ln2 = nn.LayerNorm(N_EMBED)
+
+# В forward (pre-norm — нормалізуємо ПЕРЕД attention і MLP):
+x = x + self.attn(self.ln1(x))      # LayerNorm → Attention
+x = x + self.mlp(self.ln2(x))       # LayerNorm → MLP</pre></div>
+  <button class="next-btn" onclick="goStep(8)">Далі: Residual →</button>
+</div>
+
+<!-- Step 7: Residual -->
+<div class="step" id="step8">
+  <h2 class="step-title">7. Residual Connection</h2>
+
+  <div style="text-align:center;margin:20px 0">
+    <div style="display:inline-flex;align-items:center;gap:16px">
+      <div style="background:#1a3a5e;border:2px solid #4fc3f7;border-radius:12px;padding:16px 24px;color:#4fc3f7">Input x</div>
+      <div style="font-size:1.5em;color:#555">→</div>
+      <div style="background:#1a3a2e;border:2px solid #4caf50;border-radius:12px;padding:16px 24px;color:#4caf50">Attention(x)</div>
+      <div style="font-size:1.5em;color:#555">→</div>
+      <div style="background:#3a1a3e;border:2px solid #e91e63;border-radius:12px;padding:16px 24px;color:#e91e63;font-size:1.2em">
+        x + Attention(x)
+      </div>
+    </div>
+  </div>
+
+  <div class="data-output">
+    <div class="do-title">На прикладі "hello" — токен "o"</div>
+    <div style="margin:8px 0">
+      <span style="color:#4fc3f7;font-family:monospace;font-size:0.85em">x =         [0.31, -0.15, 0.01, 1.42, ...]</span>
+      <span style="color:#666"> ← оригінал</span>
+    </div>
+    <div style="margin:8px 0">
+      <span style="color:#4caf50;font-family:monospace;font-size:0.85em">attn(x) =   [0.08, 0.22, -0.05, 0.15, ...]</span>
+      <span style="color:#666"> ← що дізнався від інших токенів</span>
+    </div>
+    <div style="margin:8px 0;border-top:1px solid #333;padding-top:8px">
+      <span style="color:#e91e63;font-family:monospace;font-size:0.85em">x + attn =  [0.39, 0.07, -0.04, 1.57, ...]</span>
+      <span style="color:#666"> ← знає і хто він, і що дізнався</span>
+    </div>
+  </div>
+
+  <div class="explanation">
+    <strong>Навіщо додавати оригінал?</strong> Без residual модель "забуває" що знала до attention.
+    Attention каже "ти схожий на 'h' і 'e'" — але без оригіналу модель забуде що вона — "o".<br><br>
+    <strong>Проблема градієнтів:</strong> у глибокій мережі (4+ шари) градієнти при backpropagation
+    множаться багато разів і зникають (vanishing gradients). Residual створює "шосе" —
+    градієнт може пройти через + напряму, минаючи всі шари.<br><br>
+    <strong>В коді:</strong> <code style="color:#4fc3f7">x = x + self.attn(self.ln1(x))</code> — один знак "+", але без нього мережа не тренується.<br><br>
+    <strong>Факт:</strong> ResNet (2015) показав що residual connections дозволяють тренувати мережі
+    зі 152 шарами замість 20. Трансформер використовує ту саму ідею.
+  </div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">Residual Connection</span><span class="code-block-file">nano_gpt.py → Block.forward()</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre># Residual = один символ "+":
+x = x + self.attn(self.ln1(x))   # x (оригінал) + результат attention
+x = x + self.mlp(self.ln2(x))    # x (попередній) + результат MLP
+
+# Без "+" (без residual) — модель глибше 4 шарів не тренується
+# x = self.attn(self.ln1(x))     # ← так НЕ працює</pre></div>
+  <button class="next-btn" onclick="goStep(9)">Далі: MLP →</button>
+</div>
+
+<!-- Step 8: MLP -->
+<div class="step" id="step9">
+  <h2 class="step-title">8. MLP (Feed-Forward)</h2>
+
+  <div class="data-output" style="border-left:3px solid #ff9800">
+    <div class="do-title" style="color:#ff9800">Що таке MLP?</div>
+    <div style="color:#ccc;font-size:1em;line-height:1.7">
+      <strong>MLP</strong> (Multi-Layer Perceptron) — проста нейронна мережа з двох лінійних шарів з нелінійністю між ними.
+      Це найпростіший "мозок" нейромережі.<br><br>
+      <strong>У трансформері MLP стоїть після attention в кожному блоці:</strong><br>
+      — <strong>Attention</strong> = "нарада" — токени обмінялись інформацією<br>
+      — <strong>MLP</strong> = "подумати самому" — кожен токен обробляє те, що дізнався. Без обміну з іншими.<br><br>
+      <strong>Факт:</strong> ~2/3 всіх параметрів трансформера знаходяться саме в MLP, не в Attention.
+    </div>
+  </div>
+
+  <div style="text-align:center;margin:20px 0">
+    <div style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
+      <div style="background:#1a3a5e;border:2px solid #4fc3f7;border-radius:10px;padding:12px 16px;color:#4fc3f7">192 dim</div>
+      <div style="font-size:1.3em;color:#555">→</div>
+      <div style="background:#3a2a1e;border:2px solid #ff9800;border-radius:10px;padding:12px 24px;color:#ff9800;font-size:1.1em">Linear<br><span style="font-size:0.75em">×4 expand</span></div>
+      <div style="font-size:1.3em;color:#555">→</div>
+      <div style="background:#2a3a1e;border:2px solid #8bc34a;border-radius:10px;padding:12px 16px;color:#8bc34a;font-size:1.2em">768 dim</div>
+      <div style="font-size:1.3em;color:#555">→</div>
+      <div style="background:#1a3a2e;border:2px solid #4caf50;border-radius:10px;padding:12px 16px;color:#4caf50">GELU</div>
+      <div style="font-size:1.3em;color:#555">→</div>
+      <div style="background:#3a2a1e;border:2px solid #ff9800;border-radius:10px;padding:12px 24px;color:#ff9800;font-size:1.1em">Linear<br><span style="font-size:0.75em">compress</span></div>
+      <div style="font-size:1.3em;color:#555">→</div>
+      <div style="background:#1a3a5e;border:2px solid #4fc3f7;border-radius:10px;padding:12px 16px;color:#4fc3f7">192 dim</div>
+    </div>
+  </div>
+
+  <div class="data-output">
+    <div class="do-title">На прикладі "hello" — токен "o" після attention</div>
+    <div style="margin:8px 0">
+      <span style="color:#888">Вхід (192 dim):</span>
+      <span style="color:#4fc3f7;font-family:monospace;font-size:0.85em"> [0.39, 0.07, -0.04, 1.57, ...]</span>
+    </div>
+    <div style="margin:8px 0">
+      <span style="color:#888">Після expand (768 dim):</span>
+      <span style="color:#ff9800;font-family:monospace;font-size:0.85em"> [0.12, -0.45, 0.88, 0.03, -0.21, 1.34, 0.55, ...]</span>
+      <span style="color:#666">← в 4 рази більше місця</span>
+    </div>
+    <div style="margin:8px 0">
+      <span style="color:#888">Після GELU:</span>
+      <span style="color:#8bc34a;font-family:monospace;font-size:0.85em"> [0.10, 0.00, 0.76, 0.02, 0.00, 1.22, 0.43, ...]</span>
+      <span style="color:#666">← негативні ≈ 0</span>
+    </div>
+    <div style="margin:8px 0">
+      <span style="color:#888">Після compress (192 dim):</span>
+      <span style="color:#4fc3f7;font-family:monospace;font-size:0.85em"> [0.52, -0.11, 0.33, 0.89, ...]</span>
+      <span style="color:#666">← назад до 192</span>
+    </div>
+  </div>
+
+  <div class="explanation">
+    <strong>Навіщо розширення 192 → 768?</strong> У 192 вимірах "тісно" для складних обчислень.
+    Розширюємо в 4 рази — створюємо "простір для думання". Після обробки стискаємо назад,
+    залишаючи тільки корисну інформацію.<br><br>
+    <strong>GELU — навіщо нелінійність?</strong><br>
+    Без GELU два лінійних шари підряд математично = один лінійний шар.
+    W2·(W1·x) = W3·x — скільки шарів не став, модель вчить тільки прямі лінії.<br>
+    GELU "згинає" простір між ними — модель може вчити криві, пороги, складні патерни.<br><br>
+    <strong>Що GELU робить з числами:</strong> м'який порог — позитивні значення проходять, негативні гасяться.<br>
+    <span style="font-family:monospace;font-size:0.85em;color:#8bc34a">
+    2.0→1.96 (пропускає) &nbsp; 0.5→0.35 (трохи гасить) &nbsp; -0.5→-0.15 (сильно гасить) &nbsp; -2.0→-0.05 (≈нуль)
+    </span><br><br>
+    <strong>Навіщо саме в MLP:</strong> після розширення до 768 dim, модель вчиться детектувати "фічі" —
+    наприклад фіча 42 = "кінець слова" (позитивне → пропускає), фіча 200 = "початок речення" (негативне → гасить).
+    GELU працює як фільтр: активує релевантне, гасить нерелевантне.<br><br>
+    <strong>В коді:</strong><br>
+    <code style="color:#4fc3f7">nn.Linear(192, 768)</code> — розширення<br>
+    <code style="color:#4fc3f7">nn.GELU()</code> — нелінійність (фільтр фіч)<br>
+    <code style="color:#4fc3f7">nn.Linear(768, 192)</code> — стиснення<br><br>
+    <strong>Факт:</strong> ~2/3 всіх параметрів трансформера знаходяться в MLP, не в Attention.
+  </div>
+  <div class="data-output" id="step8weights"></div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">MLP (Feed-Forward)</span><span class="code-block-file">nano_gpt.py → Block</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre>self.mlp = nn.Sequential(
+    nn.Linear(N_EMBED, 4 * N_EMBED),   # 192 → 768 (розширення)
+    nn.GELU(),                           # нелінійність (фільтр фіч)
+    nn.Linear(4 * N_EMBED, N_EMBED),    # 768 → 192 (стиснення)
+    nn.Dropout(DROPOUT),                 # регуляризація
+)</pre></div>
+  <button class="next-btn" onclick="goStep(10)">Далі: How It Works Together →</button>
+</div>
+
+<!-- Step 9: Transformer Block -->
+<div class="step" id="step10">
+  <h2 class="step-title">9. How It Works Together</h2>
+  <div class="block-flow" id="blockFlow"></div>
+  <div class="data-output" id="blockDataOutput"></div>
+  <div class="blocks-repeat" id="blocksRepeat">
+    Цей блок повторюється <strong style="color:#4fc3f7">×4</strong> (N_LAYER = 4).
+    Вихід одного блоку → вхід наступного. Однаковий shape: (batch, seq_len, 192)
+  </div>
+  <div class="explanation">
+    <strong>На прикладі "hello":</strong><br>
+    — <strong>Блок 1:</strong> токен "o" дізнається що він у слові (attention до h,e,l,l). MLP обробляє: "це кінець слова"<br>
+    — <strong>Блок 2:</strong> глибше — "це кінець слова 'hello', яке часто зустрічається перед пробілом"<br>
+    — <strong>Блок 3:</strong> ще глибше — "після 'hello' зазвичай йде ' world' або ' there'"<br>
+    — <strong>Блок 4:</strong> фінальне рішення: вектор "o" тепер кодує "наступний символ — пробіл (41%)"<br><br>
+    <strong>Attention</strong> змішує інформацію МІЖ токенами — "нарада з колегами".<br>
+    <strong>MLP</strong> обробляє кожен токен ОКРЕМО (192→768→192) — "подумати самому".<br>
+    <strong>Residual</strong> (<span style="color:#e91e63">+</span>) — "не забути що знав до наради". Без них глибша за 4 шари мережа не тренується.<br>
+    <strong>LayerNorm</strong> — стабілізація значень. Без нього числа ростуть/зменшуються з кожним блоком.<br><br>
+    <strong>Масштаб:</strong> Наша модель — 4 блоки. GPT-2 — 12. GPT-3 — 96. GPT-4 — ймовірно 120+.
+    Більше блоків = більше "раундів роздумів".
+  </div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">Повна модель NanoGPT</span><span class="code-block-file">nano_gpt.py</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre>class Block(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.ln1  = nn.LayerNorm(N_EMBED)
+        self.attn = CausalSelfAttention()
+        self.ln2  = nn.LayerNorm(N_EMBED)
+        self.mlp  = nn.Sequential(
+            nn.Linear(N_EMBED, 4 * N_EMBED), nn.GELU(),
+            nn.Linear(4 * N_EMBED, N_EMBED), nn.Dropout(DROPOUT))
+
+    def forward(self, x):
+        x = x + self.attn(self.ln1(x))   # attention + residual
+        x = x + self.mlp(self.ln2(x))    # MLP + residual
+        return x
+
+class NanoGPT(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.tok_emb = nn.Embedding(vocab_size, N_EMBED)
+        self.pos_emb = nn.Embedding(BLOCK_SIZE, N_EMBED)
+        self.blocks  = nn.Sequential(*[Block() for _ in range(N_LAYER)])
+        self.ln_f    = nn.LayerNorm(N_EMBED)
+        self.head    = nn.Linear(N_EMBED, vocab_size, bias=False)
+
+    def forward(self, idx, targets=None):
+        B, T = idx.shape
+        x = self.tok_emb(idx) + self.pos_emb(torch.arange(T, device=idx.device))
+        x = self.ln_f(self.blocks(x))
+        logits = self.head(x)
+        loss = None
+        if targets is not None:
+            loss = F.cross_entropy(logits.view(-1, vocab_size), targets.view(-1))
+        return logits, loss</pre></div>
+  <button class="next-btn" onclick="goStep(11)">Далі: Генерація →</button>
+</div>
+
+<!-- Step 10: Generation -->
+<div class="step" id="step11">
+  <h2 class="step-title">10. Генерація (autoregressive)</h2>
+  <div class="gen-prompt" id="genPrompt"></div>
+  <div class="prob-bars" id="probBars"></div>
+  <div class="temp-control">
+    <label>Temperature: <span class="temp-value" id="tempVal">1.0</span></label><br>
+    <input type="range" class="temp-slider" id="tempSlider" min="0.2" max="2.0" step="0.1" value="1.0">
+    <div style="display:flex;justify-content:space-between;max-width:300px;margin:0 auto;color:#666;font-size:0.8em">
+      <span>0.2 (безпечно)</span><span>2.0 (креативно)</span>
+    </div>
+  </div>
+  <div class="data-output" id="genDataOutput"></div>
+  <div class="gen-controls">
+    <button class="gen-btn" id="genNextBtn" onclick="genNextToken()">▶ Згенерувати токен</button>
+    <button class="gen-btn reset" onclick="resetGen()">↺ Скинути</button>
+  </div>
+  <div class="explanation">
+    <strong>На прикладі "hello" → " world":</strong><br>
+    Крок 1: "hello" → весь pipeline → ␣:41% → обираємо пробіл<br>
+    Крок 2: "hello " → весь pipeline → w:38% → обираємо "w"<br>
+    Крок 3: "hello w" → весь pipeline → o:45% → обираємо "o"<br>
+    ...і так далі поки не вийде "hello world!"<br><br>
+    <strong>Зверни увагу:</strong> з кожним кроком модель стає впевненішою (41% → 45% → 52% → 73%).
+    Це тому, що контекст "hello wor" сильно звужує варіанти — мало слів починаються на "wor".<br><br>
+    <strong>Temperature</strong> керує "впевненістю" вибору:<br>
+    — Низька (0.2) = модель майже завжди обирає найімовірніший токен (безпечно, передбачувано)<br>
+    — Висока (2.0) = розподіл "розмазується", модель може обрати "hello worm" замість "hello world"<br><br>
+    <strong>Після "hello world!"</strong> модель більше не має підказки — генерація стає випадковою.
+    Спробуй натиснути ще кілька разів і побачиш хаос.<br><br>
+    <strong>Цей самий алгоритм</strong> використовують GPT-4, Claude, Gemini — різниця лише в масштабі (1.8M vs 1,800,000M параметрів),
+    BPE-токенізації і KV-cache для швидкості.
+  </div>
+  <div class="code-block"><div class="code-block-header"><span class="code-block-title">Генерація (autoregressive)</span><span class="code-block-file">nano_gpt.py → NanoGPT.generate()</span><button class="copy-btn" onclick="copyCode(this)">копіювати</button></div><pre>@torch.no_grad()
+def generate(self, idx, max_new_tokens, temperature=1.0):
+    for _ in range(max_new_tokens):
+        idx_cond = idx[:, -BLOCK_SIZE:]              # обрізаємо до контексту
+        logits, _ = self(idx_cond)                    # forward pass
+        logits = logits[:, -1, :] / temperature       # остання позиція / temp
+        probs = F.softmax(logits, dim=-1)             # logits → ймовірності
+        nxt = torch.multinomial(probs, num_samples=1) # випадковий вибір
+        idx = torch.cat([idx, nxt], dim=1)            # додаємо до тексту
+    return idx</pre></div>
+</div>
+
+<script>
+// ---- Data ----
+const STEPS = [
+  "0. Конфігурація",
+  "1. Токенізація", "2. Embeddings", "3. Self-Attention",
+  "4. Multi-Head", "5. Causal Mask", "6. LayerNorm",
+  "7. Residual", "8. MLP", "9. How It Works Together", "10. Генерація"
+];
+let currentStep = 0;
+
+// Fake vocab (char-level, like nano_gpt.py)
+function buildVocab(text) {
+  const chars = [...new Set(text.split(''))].sort();
+  const stoi = {}; chars.forEach((c, i) => stoi[c] = i);
+  return stoi;
+}
+
+// Fake attention weights (causal — only attend to past)
+function fakeAttentionWeights(n) {
+  const w = [];
+  for (let i = 0; i < n; i++) {
+    const row = [];
+    let sum = 0;
+    for (let j = 0; j <= i; j++) {
+      const v = Math.random() + (j === i ? 1.5 : 0) + (j === i-1 ? 0.8 : 0);
+      row.push(v); sum += v;
+    }
+    // Normalize
+    w.push(row.map(v => v / sum));
+  }
+  return w;
+}
+
+// Color for embedding bars
+function embColor(seed, type) {
+  const hue = type === 'tok' ? (seed * 37 + 180) % 360
+            : type === 'pos' ? (seed * 53 + 30) % 360
+            : (seed * 43 + 100) % 360;
+  return `hsl(${hue}, 60%, 45%)`;
+}
+
+// ---- Fake data generators ----
+// Seeded pseudo-random for consistent vectors
+function seededRand(seed) {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  return function() { s = s * 16807 % 2147483647; return (s - 1) / 2147483646; };
+}
+
+function fakeVector(dim, seed) {
+  const rng = seededRand(seed);
+  return Array.from({length: dim}, () => +(rng() * 2 - 1).toFixed(3));
+}
+
+function vecToColor(val) {
+  // Map -1..1 to color: blue (negative) -> dark (zero) -> orange (positive)
+  const t = (val + 1) / 2; // 0..1
+  const r = Math.round(t * 255);
+  const b = Math.round((1 - t) * 200);
+  return `rgb(${r}, ${Math.round(40 + t*40)}, ${b})`;
+}
+
+function renderVectorRow(container, label, vec, maxShow = 8) {
+  const row = document.createElement('div');
+  row.className = 'vec-row';
+  const lbl = document.createElement('div');
+  lbl.className = 'vec-label';
+  lbl.textContent = label;
+  row.appendChild(lbl);
+  const show = vec.slice(0, maxShow);
+  show.forEach(v => {
+    const cell = document.createElement('div');
+    cell.className = 'vec-cell';
+    cell.style.background = vecToColor(v);
+    cell.textContent = v.toFixed(2);
+    row.appendChild(cell);
+  });
+  if (vec.length > maxShow) {
+    const dots = document.createElement('span');
+    dots.className = 'vec-dots';
+    dots.textContent = `... (${vec.length} dim)`;
+    row.appendChild(dots);
+  }
+  container.appendChild(row);
+}
+
+// ---- Code block helper ----
+function codeBlock(title, code, file) {
+  return `<div class="code-block">
+    <div class="code-block-header">
+      <span class="code-block-title">${title}</span>
+      ${file ? `<span class="code-block-file">${file}</span>` : ''}
+      <button class="copy-btn" onclick="copyCode(this)">копіювати</button>
+    </div>
+    <pre>${code}</pre>
+  </div>`;
+}
+function copyCode(btn) {
+  const code = btn.closest('.code-block').querySelector('pre').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    btn.textContent = 'скопійовано ✓';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'копіювати'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ---- Weight visualization helpers ----
+function valToWeightColor(v) {
+  // -1..1 → strong blue .. grey(near zero) .. strong orange
+  const abs = Math.abs(v);
+  const sat = abs; // saturation grows with magnitude
+  if (v >= 0) {
+    // positive → orange/red
+    const r = Math.round(40 + sat * 215);
+    const g = Math.round(35 + sat * 60);
+    const b = Math.round(50 - sat * 50);
+    return `rgb(${r},${g},${b})`;
+  } else {
+    // negative → blue
+    const r = Math.round(40 - sat * 20);
+    const g = Math.round(35 + sat * 40);
+    const b = Math.round(50 + sat * 180);
+    return `rgb(${r},${g},${b})`;
+  }
+}
+
+// Create a weight matrix grid with given dimensions (show max 16x16)
+// Starts dim/grey (random noise), gains structure with training
+function createWeightGrid(container, rows, cols, seed, label, fullRows, fullCols) {
+  const showR = Math.min(rows, 16);
+  const showC = Math.min(cols, 16);
+  const rng = seededRand(seed);
+
+  const viz = document.createElement('div');
+  viz.className = 'weight-viz';
+
+  const title = document.createElement('div');
+  title.className = 'weight-viz-title';
+  title.innerHTML = `${label} <span class="weight-dims">(${fullRows || rows} × ${fullCols || cols})</span>`;
+  viz.appendChild(title);
+
+  const grid = document.createElement('div');
+  grid.className = 'weight-grid';
+  grid.style.gridTemplateColumns = `repeat(${showC}, 14px)`;
+  grid.dataset.seed = seed;
+  grid.dataset.step = 0;
+
+  // Each cell stores a "target" pattern and starts near zero (noise)
+  const targetRng = seededRand(seed + 9999);
+  for (let i = 0; i < showR; i++) {
+    for (let j = 0; j < showC; j++) {
+      const cell = document.createElement('div');
+      cell.className = 'weight-cell';
+      const noise = (rng() - 0.5) * 0.3;  // start: small random noise (grey)
+      const target = targetRng() * 2 - 1;  // end: strong pattern
+      cell.dataset.val = noise;
+      cell.dataset.target = target;
+      cell.style.background = valToWeightColor(noise);
+      grid.appendChild(cell);
+    }
+  }
+  viz.appendChild(grid);
+
+  if (rows < (fullRows || rows) || cols < (fullCols || cols)) {
+    const dots = document.createElement('div');
+    dots.className = 'weight-label';
+    dots.textContent = `показано ${showR}×${showC} з ${fullRows || rows}×${fullCols || cols}`;
+    viz.appendChild(dots);
+  }
+
+  container.appendChild(viz);
+  return grid;
+}
+
+// Animate "training step" — weights move from noise towards learned pattern
+function animateTrainingStep(grid, progress) {
+  // progress: 0 = random noise, 1 = fully learned pattern
+  const cells = grid.querySelectorAll('.weight-cell');
+  cells.forEach(cell => {
+    const target = parseFloat(cell.dataset.target);
+    const noise = (Math.random() - 0.5) * 0.15 * (1 - progress); // less noise as we train
+    const val = target * progress + (1 - progress) * parseFloat(cell.dataset.val) * 0.8 + noise;
+    const clamped = Math.max(-1, Math.min(1, val));
+    cell.dataset.val = clamped;
+    cell.style.background = valToWeightColor(clamped);
+  });
+}
+
+// ---- Navigation ----
+// Groups: Підготовка (1,2), Transformer (3,4,5,6), Вихід (7)
+const NAV_GROUPS = [
+  { label: 'Конфіг', cls: 'group-config', steps: [0] },
+  { label: 'Підготовка', cls: 'group-prep', steps: [1, 2] },
+  { label: 'Transformer', cls: 'group-transformer', steps: [3, 4, 5, 6, 7, 8, 9] },
+  { label: 'Вихід', cls: 'group-output', steps: [10] },
+];
+
+function buildNav() {
+  const nav = document.getElementById('nav');
+  NAV_GROUPS.forEach(group => {
+    const g = document.createElement('div');
+    g.className = `nav-group ${group.cls}`;
+    const label = document.createElement('div');
+    label.className = 'nav-group-label';
+    label.textContent = group.label;
+    g.appendChild(label);
+    group.steps.forEach(i => {
+      const btn = document.createElement('button');
+      btn.textContent = STEPS[i];
+      btn.dataset.step = i + 1;
+      btn.dataset.group = group.cls;
+      btn.onclick = () => goStep(i + 1);
+      g.appendChild(btn);
+    });
+    nav.appendChild(g);
+  });
+}
+
+function goStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('visible'));
+  document.getElementById(`step${n}`).classList.add('visible');
+  document.querySelectorAll('.nav button').forEach(b => {
+    b.classList.toggle('active', parseInt(b.dataset.step) === n);
+  });
+  // Init step content
+  if (n === 1) initConfig();
+  if (n === 2) initTokenization();
+  if (n === 3) initEmbeddings();
+  if (n === 4) initAttention();
+  if (n === 5) initMultiHead();
+  if (n === 6) initMask();
+  if (n === 7) initLayerNormWeights();
+  if (n === 9) initMLPWeights();
+  if (n === 10) initBlock();
+  if (n === 11) initGeneration();
+}
+
+// ---- Step 0: Config ----
+function initConfig() {
+  const container = document.getElementById('configSliders');
+  const summary = document.getElementById('configSummary');
+  if (container.children.length > 0) return; // already init
+
+  const params = [
+    { name: 'BLOCK_SIZE', val: 128, min: 16, max: 512, step: 16,
+      desc: 'Довжина контексту — скільки токенів модель бачить',
+      effect: v => v <= 32 ? 'Дуже короткий контекст — модель не бачить цілі слова'
+            : v <= 128 ? 'Достатньо для коротких фраз і речень'
+            : v <= 256 ? 'Бачить кілька речень — краща зв\'язність'
+            : 'Довгий контекст — повільніше, але більше розуміння' },
+    { name: 'N_EMBED', val: 192, min: 32, max: 768, step: 32,
+      desc: 'Розмірність вектора — скільки чисел описують кожен токен',
+      effect: v => v <= 64 ? 'Тісно — мало місця для інформації, низька якість'
+            : v <= 192 ? 'Баланс між якістю і швидкістю'
+            : v <= 384 ? 'Більше інформації на токен — краща якість, але повільніше'
+            : 'Як у GPT-2 Small — потрібно багато даних і GPU' },
+    { name: 'N_HEAD', val: 6, min: 1, max: 12, step: 1,
+      desc: 'Кількість attention-голів — скільки "перспектив" одночасно',
+      effect: v => v <= 1 ? '1 голова — бачить тільки один тип зв\'язків'
+            : v <= 4 ? 'Кілька перспектив — граматика, позиція, семантика'
+            : v <= 8 ? 'Добре для більшості задач'
+            : 'Багато голів — але кожна працює з меншим вектором (' + Math.round(192/v) + ' dim)' },
+    { name: 'N_LAYER', val: 4, min: 1, max: 12, step: 1,
+      desc: 'Кількість transformer-блоків — скільки "раундів думання"',
+      effect: v => v <= 1 ? '1 блок — тільки прості патерни (сусідні символи)'
+            : v <= 4 ? 'Вчить слова і короткі фрази'
+            : v <= 8 ? 'Вчить речення і контекст — але потрібно більше даних'
+            : 'Як у великих моделях — ризик overfitting на малих даних' },
+    { name: 'DROPOUT', val: 0.2, min: 0.0, max: 0.5, step: 0.05,
+      desc: 'Dropout — % нейронів що "вимикаються" при тренуванні',
+      effect: v => v <= 0.0 ? 'Немає регуляризації — модель зазубрить тренувальні дані!'
+            : v <= 0.15 ? 'Легка регуляризація — для великих датасетів'
+            : v <= 0.3 ? 'Стандартний рівень — баланс між навчанням і запам\'ятовуванням'
+            : 'Агресивно — модель може вчитися занадто повільно' },
+    { name: 'LR', val: 3e-4, min: 1e-5, max: 1e-2, step: 1e-5,
+      desc: 'Learning Rate — наскільки сильно оновлювати ваги',
+      effect: v => v <= 5e-5 ? 'Дуже маленький — тренування буде повільним (але стабільним)'
+            : v <= 5e-4 ? 'Стандартний діапазон для трансформерів'
+            : v <= 2e-3 ? 'Швидке навчання — може бути нестабільним'
+            : 'Занадто великий — loss буде "стрибати", модель не зійдеться' },
+    { name: 'MAX_ITERS', val: 1500, min: 100, max: 5000, step: 100,
+      desc: 'Кількість кроків тренування',
+      effect: v => v <= 300 ? 'Мало — модель не встигне навчитись'
+            : v <= 1000 ? 'Достатньо для малого датасету'
+            : v <= 2000 ? 'Стандартний рівень для нашої моделі'
+            : 'Довго — ризик overfitting якщо мало даних' },
+  ];
+
+  params.forEach(p => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:12px;margin:10px 0;padding:8px;background:rgba(255,255,255,0.02);border-radius:8px';
+    const isFloat = p.step < 1;
+    const formatVal = v => isFloat ? (p.name === 'LR' ? v.toExponential(1) : v.toFixed(2)) : v;
+    row.innerHTML = `
+      <div style="min-width:110px;font-family:monospace;color:#4fc3f7;font-size:0.9em">${p.name}</div>
+      <input type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${p.val}"
+        style="flex:1;accent-color:#4fc3f7"
+        oninput="this.parentElement.querySelector('.cfg-val').textContent='${p.name === 'LR' ? '' : ''}' + (${isFloat} ? (${p.name === 'LR' ? 'true' : 'false'} ? parseFloat(this.value).toExponential(1) : parseFloat(this.value).toFixed(2)) : this.value); updateConfigSummary();">
+      <div class="cfg-val" style="min-width:55px;font-family:monospace;color:#fff;text-align:right;font-size:0.95em">${formatVal(p.val)}</div>
+    `;
+    const desc = document.createElement('div');
+    desc.style.cssText = 'color:#888;font-size:0.8em;margin:-4px 0 4px 122px';
+    desc.textContent = p.desc;
+    container.appendChild(row);
+    container.appendChild(desc);
+  });
+
+  window._configParams = params;
+  updateConfigSummary();
+}
+
+function updateConfigSummary() {
+  const summary = document.getElementById('configSummary');
+  const sliders = document.querySelectorAll('#configSliders input[type=range]');
+  if (sliders.length === 0) return;
+
+  const vals = {};
+  const params = window._configParams;
+  sliders.forEach((s, i) => { vals[params[i].name] = parseFloat(s.value); });
+
+  const nEmbed = vals.N_EMBED || 192;
+  const nHead = vals.N_HEAD || 6;
+  const nLayer = vals.N_LAYER || 4;
+  const blockSize = vals.BLOCK_SIZE || 128;
+  const vocabSize = 65;
+  const headDim = Math.floor(nEmbed / nHead);
+
+  // Calculate total params
+  const embParams = vocabSize * nEmbed + blockSize * nEmbed;
+  const attnParams = (nEmbed * 3 * nEmbed + nEmbed * nEmbed) * nLayer;
+  const mlpParams = (nEmbed * 4 * nEmbed + 4 * nEmbed * nEmbed) * nLayer;
+  const lnParams = 2 * nEmbed * (2 * nLayer + 1);
+  const headParams = nEmbed * vocabSize;
+  const total = embParams + attnParams + mlpParams + lnParams + headParams;
+
+  // Effects
+  let effects = [];
+  params.forEach((p, i) => {
+    const v = parseFloat(sliders[i].value);
+    effects.push({ name: p.name, text: p.effect(v) });
+  });
+
+  // Warning if N_EMBED not divisible by N_HEAD
+  const warning = nEmbed % nHead !== 0 ?
+    `<div style="color:#ef5350;margin:8px 0;padding:8px;background:rgba(239,83,80,0.1);border-radius:6px">
+      ⚠️ N_EMBED (${nEmbed}) не ділиться на N_HEAD (${nHead})! Модель не запуститься.
+      head_dim = ${nEmbed}/${nHead} = ${(nEmbed/nHead).toFixed(1)} — має бути ціле число.
+    </div>` : '';
+
+  summary.innerHTML = `
+    <div class="do-title">Наслідки поточної конфігурації</div>
+    ${warning}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0">
+      <div style="padding:8px;background:rgba(79,195,247,0.1);border-radius:6px">
+        <div style="color:#4fc3f7;font-size:0.85em">Параметри моделі</div>
+        <div style="color:#fff;font-size:1.3em;font-family:monospace">${(total/1e6).toFixed(1)}M</div>
+      </div>
+      <div style="padding:8px;background:rgba(76,175,80,0.1);border-radius:6px">
+        <div style="color:#4caf50;font-size:0.85em">Head dimension</div>
+        <div style="color:#fff;font-size:1.3em;font-family:monospace">${headDim}</div>
+      </div>
+      <div style="padding:8px;background:rgba(255,152,0,0.1);border-radius:6px">
+        <div style="color:#ff9800;font-size:0.85em">MLP hidden dim</div>
+        <div style="color:#fff;font-size:1.3em;font-family:monospace">${nEmbed * 4}</div>
+      </div>
+      <div style="padding:8px;background:rgba(233,30,99,0.1);border-radius:6px">
+        <div style="color:#e91e63;font-size:0.85em">Контекст</div>
+        <div style="color:#fff;font-size:1.3em;font-family:monospace">${blockSize} токенів</div>
+      </div>
+    </div>
+    <div style="margin-top:10px">
+      ${effects.map(e => `<div style="margin:4px 0;padding:4px 8px;font-size:0.85em">
+        <span style="color:#4fc3f7;font-family:monospace">${e.name}:</span>
+        <span style="color:#aaa">${e.text}</span>
+      </div>`).join('')}
+    </div>
+    <div style="margin-top:12px;padding:8px;background:rgba(255,255,255,0.03);border-radius:6px;font-size:0.8em;color:#666">
+      Порівняння: GPT-2 Small = 124M params (N_EMBED=768, N_HEAD=12, N_LAYER=12).
+      Наша модель = ${(total/1e6).toFixed(1)}M — у ${Math.round(124e6/total)}x менше.
+    </div>
+  `;
+}
+
+// ---- Step 1: Tokenization ----
+function initTokenization() {
+  renderTokens();
+}
+
+function renderTokens() {
+  const text = document.getElementById('tokenInput').value || 'hello';
+  const vocab = buildVocab(text);
+  const row = document.getElementById('tokensRow');
+  row.innerHTML = '';
+  const ids = [];
+  [...text].forEach((ch, i) => {
+    const box = document.createElement('div');
+    box.className = 'token-box';
+    box.style.animationDelay = `${i * 0.06}s`;
+    const charEl = document.createElement('div');
+    charEl.className = 'token-char';
+    charEl.textContent = ch === ' ' ? '␣' : ch;
+    const idEl = document.createElement('div');
+    idEl.className = 'token-id';
+    idEl.textContent = vocab[ch];
+    box.appendChild(charEl);
+    box.appendChild(idEl);
+    row.appendChild(box);
+    ids.push(vocab[ch]);
+  });
+
+  // Data output: show the tensor
+  const out = document.getElementById('tokenDataOutput');
+  out.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'do-title';
+  title.innerHTML = `Результат: тензор token IDs <span class="shape-badge">shape: (1, ${ids.length})</span>`;
+  out.appendChild(title);
+  const vecRow = document.createElement('div');
+  vecRow.className = 'vec-row';
+  const lbl = document.createElement('div');
+  lbl.className = 'vec-label';
+  lbl.textContent = 'idx';
+  vecRow.appendChild(lbl);
+  ids.forEach(id => {
+    const cell = document.createElement('div');
+    cell.className = 'vec-cell';
+    cell.style.background = `hsl(${id * 23 % 360}, 50%, 35%)`;
+    cell.textContent = id;
+    vecRow.appendChild(cell);
+  });
+  out.appendChild(vecRow);
+}
+document.getElementById('tokenInput').addEventListener('input', renderTokens);
+
+// ---- Step 2: Embeddings ----
+function initEmbeddings() {
+  const text = document.getElementById('tokenInput').value || 'hello';
+  const chars = [...text];
+  ['tokEmbs', 'posEmbs', 'combEmbs'].forEach(id => document.getElementById(id).innerHTML = '');
+
+  chars.forEach((ch, i) => {
+    // Token emb
+    const t = document.createElement('div');
+    t.className = 'emb-bar';
+    t.style.background = `linear-gradient(to top, ${embColor(ch.charCodeAt(0), 'tok')}, ${embColor(ch.charCodeAt(0)+50, 'tok')})`;
+    t.style.animationDelay = `${i * 0.08}s`;
+    const tl = document.createElement('div');
+    tl.className = 'label';
+    tl.textContent = ch === ' ' ? '␣' : ch;
+    t.appendChild(tl);
+    document.getElementById('tokEmbs').appendChild(t);
+
+    // Position emb
+    const p = document.createElement('div');
+    p.className = 'emb-bar';
+    p.style.background = `linear-gradient(to top, ${embColor(i, 'pos')}, ${embColor(i+30, 'pos')})`;
+    p.style.animationDelay = `${i * 0.08 + 0.3}s`;
+    const pl = document.createElement('div');
+    pl.className = 'label';
+    pl.textContent = `pos ${i}`;
+    p.appendChild(pl);
+    document.getElementById('posEmbs').appendChild(p);
+
+    // Combined
+    const c = document.createElement('div');
+    c.className = 'emb-bar';
+    c.style.background = `linear-gradient(to top, ${embColor(ch.charCodeAt(0) + i, 'comb')}, ${embColor(ch.charCodeAt(0) + i + 80, 'comb')})`;
+    c.style.animationDelay = `${i * 0.08 + 0.6}s`;
+    c.style.height = '70px';
+    const cl = document.createElement('div');
+    cl.className = 'label';
+    cl.textContent = ch === ' ' ? '␣' : ch;
+    c.appendChild(cl);
+    document.getElementById('combEmbs').appendChild(c);
+  });
+
+  // Data output: show embedding vectors
+  const out = document.getElementById('embDataOutput');
+  out.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'do-title';
+  title.innerHTML = `Результат: матриця embeddings <span class="shape-badge">shape: (1, ${chars.length}, 192)</span>`;
+  out.appendChild(title);
+  const subtitle = document.createElement('div');
+  subtitle.style.cssText = 'color:#666;font-size:0.8em;margin-bottom:8px';
+  subtitle.textContent = 'Кожен рядок — вектор одного токена (показано перші 8 із 192 значень):';
+  out.appendChild(subtitle);
+  chars.forEach((ch, i) => {
+    const tok_v = fakeVector(192, ch.charCodeAt(0) * 100 + 1);
+    const pos_v = fakeVector(192, i * 100 + 9999);
+    const comb = tok_v.map((t, j) => +(t + pos_v[j]).toFixed(3));
+    const label = ch === ' ' ? '␣' : ch;
+    renderVectorRow(out, `"${label}"`, comb, 8);
+  });
+
+  // Weight visualization
+  const wPanel = document.getElementById('step2weights');
+  wPanel.innerHTML = '';
+  const wTitle = document.createElement('div');
+  wTitle.className = 'do-title';
+  wTitle.innerHTML = 'Ваги, які модель вчить (натисни "Крок тренування"):';
+  wPanel.appendChild(wTitle);
+
+  const legend = document.createElement('div');
+  legend.className = 'weight-legend';
+  legend.innerHTML = '<span>негативна</span><div class="weight-legend-bar"></div><span>позитивна</span> <span style="margin-left:12px">кожна клітинка = одне число (вага)</span>';
+  wPanel.appendChild(legend);
+
+  const gridsRow = document.createElement('div');
+  gridsRow.style.cssText = 'display:flex;gap:20px;flex-wrap:wrap;margin:8px 0';
+  const g1 = createWeightGrid(gridsRow, 12, 16, 2001, 'Token Embedding', 65, 192);
+  const g2 = createWeightGrid(gridsRow, 12, 16, 2002, 'Position Embedding', 128, 192);
+  wPanel.appendChild(gridsRow);
+
+  const status = document.createElement('div');
+  status.className = 'train-status';
+  status.innerHTML = 'До тренування: ваги випадкові (шум). <span class="loss-val">loss = 4.35</span>';
+  wPanel.appendChild(status);
+
+  let trainStep = 0;
+  const stepsPerClick = 100;  // кожен клік = 100 ітерацій
+  const maxIters = 1500;
+  // Реальна крива loss з nano_gpt.py
+  function lossAtIter(it) {
+    if (it <= 0) return 4.35;
+    return 0.43 + (4.35 - 0.43) * Math.exp(-it / 350);
+  }
+  const btn = document.createElement('button');
+  btn.className = 'train-btn';
+  btn.textContent = '▶ Крок тренування (+100 ітерацій)';
+  btn.onclick = () => {
+    trainStep = Math.min(trainStep + stepsPerClick, maxIters);
+    const progress = trainStep / maxIters;  // 0→1
+    animateTrainingStep(g1, progress);
+    animateTrainingStep(g2, progress);
+    const l = lossAtIter(trainStep);
+    const msg = trainStep <= 200 ? '← ваги ще хаотичні, модель вгадує випадково'
+              : trainStep <= 500 ? '← починають з\'являтись патерни'
+              : trainStep <= 1000 ? '← модель вчиться! ваги набувають структури'
+              : '← ваги стабілізувались (модель навчена)';
+    status.innerHTML = `iter ${trainStep}/${maxIters}: backward() → opt.step() оновив ваги. <span class="loss-val">loss = ${l.toFixed(2)}</span> ${msg}`;
+    if (trainStep >= maxIters) btn.disabled = true;
+  };
+  wPanel.appendChild(btn);
+
+  const resetBtn = document.createElement('button');
+  resetBtn.className = 'train-btn';
+  resetBtn.style.borderColor = '#ef5350';
+  resetBtn.style.color = '#ef5350';
+  resetBtn.textContent = '↺ Скинути';
+  resetBtn.onclick = () => {
+    trainStep = 0;
+    wPanel.innerHTML = '';
+    initEmbeddings();
+  };
+  wPanel.appendChild(resetBtn);
+}
+
+// ---- Step 3: Attention ----
+let attnWeights = [];
+let attnChars = [];
+let attnScoresRaw = []; // pre-softmax scores
+let attnQVecs = [], attnKVecs = [], attnVVecs = [];
+let selectedAttnToken = -1;
+
+function initAttention() {
+  const text = document.getElementById('tokenInput').value || 'hello';
+  attnChars = [...text];
+  const container = document.getElementById('attnContainer');
+  const tokensDiv = document.getElementById('attnTokens');
+  const svg = document.getElementById('attnSvg');
+
+  tokensDiv.innerHTML = '';
+  svg.innerHTML = '';
+  attnWeights = fakeAttentionWeights(attnChars.length);
+  selectedAttnToken = -1;
+
+  // Generate fake Q, K, V vectors for each token
+  attnQVecs = attnChars.map((_, i) => fakeVector(32, i * 100 + 11));
+  attnKVecs = attnChars.map((_, i) => fakeVector(32, i * 100 + 22));
+  attnVVecs = attnChars.map((_, i) => fakeVector(32, i * 100 + 33));
+
+  // Compute fake raw scores from Q·K (just for display)
+  attnScoresRaw = [];
+  for (let i = 0; i < attnChars.length; i++) {
+    const row = [];
+    for (let j = 0; j <= i; j++) {
+      // Fake dot product: proportional to attention weight
+      row.push(+(Math.log(attnWeights[i][j] + 0.01) + 2).toFixed(2));
+    }
+    attnScoresRaw.push(row);
+  }
+
+  attnChars.forEach((ch, i) => {
+    const el = document.createElement('div');
+    el.className = 'attn-token';
+    el.textContent = ch === ' ' ? '␣' : ch;
+    el.dataset.idx = i;
+    el.addEventListener('click', () => selectAttnToken(i));
+    el.addEventListener('mouseenter', () => highlightAttn(i));
+    el.addEventListener('mouseleave', () => { if (selectedAttnToken === -1) clearAttn(); });
+    tokensDiv.appendChild(el);
+  });
+
+  requestAnimationFrame(() => drawAttentionLines(attnChars.length));
+
+  // Show the full attention matrix
+  renderAttnMatrix();
+
+  // Weight visualization for attention
+  const wPanel = document.getElementById('step3weights');
+  wPanel.innerHTML = '';
+  const wTitle = document.createElement('div');
+  wTitle.className = 'do-title';
+  wTitle.innerHTML = 'Ваги Attention (вчаться при тренуванні):';
+  wPanel.appendChild(wTitle);
+  const legend = document.createElement('div');
+  legend.className = 'weight-legend';
+  legend.innerHTML = '<span>негативна</span><div class="weight-legend-bar"></div><span>позитивна</span>';
+  wPanel.appendChild(legend);
+  const gridsRow = document.createElement('div');
+  gridsRow.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;margin:8px 0';
+  createWeightGrid(gridsRow, 12, 16, 3001, 'W_Q (Query)', 192, 192);
+  createWeightGrid(gridsRow, 12, 16, 3002, 'W_K (Key)', 192, 192);
+  createWeightGrid(gridsRow, 12, 16, 3003, 'W_V (Value)', 192, 192);
+  createWeightGrid(gridsRow, 12, 16, 3004, 'W_out (проєкція)', 192, 192);
+  wPanel.appendChild(gridsRow);
+  const note = document.createElement('div');
+  note.style.cssText = 'color:#666;font-size:0.8em;margin-top:8px';
+  note.textContent = 'Кожна матриця — 192×192 = 36,864 ваги. × 4 блоки = 147,456 ваг тільки для attention. Модель вчить ці числа щоб Q·K давав високий score для "цікавих" пар токенів.';
+  wPanel.appendChild(note);
+
+  // Auto-select a middle token for demo
+  document.getElementById('attnQKVPanel').style.display = 'none';
+  setTimeout(() => selectAttnToken(Math.min(4, attnChars.length - 1)), 300);
+}
+
+function selectAttnToken(idx) {
+  selectedAttnToken = idx;
+  highlightAttn(idx);
+  // Mark selected token
+  document.querySelectorAll('.attn-token').forEach(t => {
+    t.style.boxShadow = parseInt(t.dataset.idx) === idx ? '0 0 12px rgba(79,195,247,0.7)' : 'none';
+  });
+  renderQKVPanel(idx);
+}
+
+function renderQKVPanel(idx) {
+  const panel = document.getElementById('attnQKVPanel');
+  panel.style.display = 'block';
+  panel.innerHTML = '';
+
+  const ch = attnChars[idx] === ' ' ? '␣' : attnChars[idx];
+  const title = document.createElement('div');
+  title.className = 'do-title';
+  title.innerHTML = `Attention для токена "<span style="color:#fff;font-size:1.2em">${ch}</span>" (позиція ${idx})`;
+  panel.appendChild(title);
+
+  // Step 1: Q vector
+  const s1 = document.createElement('div');
+  s1.className = 'qkv-step';
+  s1.innerHTML = `<div class="qkv-step-header">
+    <div class="qkv-step-num" style="background:#1a3a5e;color:#64b5f6">1</div>
+    <div class="qkv-step-title">Мій вектор <span style="color:#64b5f6">Q</span> (Query) — "що я шукаю?"</div>
+  </div>`;
+  renderVectorRow(s1, 'Q', attnQVecs[idx], 6);
+  panel.appendChild(s1);
+
+  // Step 2: Q · K scores
+  const s2 = document.createElement('div');
+  s2.className = 'qkv-step';
+  s2.innerHTML = `<div class="qkv-step-header">
+    <div class="qkv-step-num" style="background:#3a1a3e;color:#ce93d8">2</div>
+    <div class="qkv-step-title">Скалярний добуток <span style="color:#64b5f6">Q</span> · <span style="color:#ce93d8">K</span> кожного токена → "наскільки він мені цікавий?"</div>
+  </div>`;
+  const scores = document.createElement('div');
+  scores.className = 'score-pills';
+  for (let j = 0; j < attnChars.length; j++) {
+    const pill = document.createElement('div');
+    pill.className = 'score-pill';
+    const jch = attnChars[j] === ' ' ? '␣' : attnChars[j];
+    if (j > idx) {
+      pill.classList.add('masked');
+      pill.innerHTML = `<span class="sp-char">${jch}</span><span class="sp-val">-∞</span>`;
+      pill.title = 'Заблоковано causal mask (майбутнє)';
+    } else {
+      const score = attnScoresRaw[idx][j];
+      const heat = Math.max(0, Math.min(1, (score + 1) / 4));
+      pill.style.background = `rgba(76,175,80,${heat * 0.3})`;
+      pill.innerHTML = `<span class="sp-char">${jch}</span><span class="sp-val">${score.toFixed(1)}</span>`;
+    }
+    scores.appendChild(pill);
+  }
+  s2.appendChild(scores);
+  panel.appendChild(s2);
+
+  // Step 3: Softmax
+  const s3 = document.createElement('div');
+  s3.className = 'qkv-step';
+  s3.innerHTML = `<div class="qkv-step-header">
+    <div class="qkv-step-num" style="background:#1a3a2e;color:#4caf50">3</div>
+    <div class="qkv-step-title">Softmax → ймовірності (сума = 1.0)</div>
+  </div>`;
+  const weights = document.createElement('div');
+  weights.className = 'score-pills';
+  for (let j = 0; j < attnChars.length; j++) {
+    const pill = document.createElement('div');
+    pill.className = 'score-pill';
+    const jch = attnChars[j] === ' ' ? '␣' : attnChars[j];
+    if (j > idx) {
+      pill.classList.add('masked');
+      pill.innerHTML = `<span class="sp-char">${jch}</span><span class="sp-val">0</span>`;
+    } else {
+      const w = attnWeights[idx][j];
+      pill.style.background = `rgba(76,175,80,${w})`;
+      pill.style.borderColor = w > 0.2 ? '#4caf50' : '#333';
+      pill.innerHTML = `<span class="sp-char">${jch}</span><span class="sp-val" style="color:${w > 0.15 ? '#4caf50' : '#888'}">${(w * 100).toFixed(0)}%</span>`;
+      if (w === Math.max(...attnWeights[idx])) pill.classList.add('selected');
+    }
+    weights.appendChild(pill);
+  }
+  s3.appendChild(weights);
+  panel.appendChild(s3);
+
+  // Step 4: Weighted sum of V
+  const s4 = document.createElement('div');
+  s4.className = 'qkv-step';
+  s4.innerHTML = `<div class="qkv-step-header">
+    <div class="qkv-step-num" style="background:#1a3a2e;color:#81c784">4</div>
+    <div class="qkv-step-title">Зважена сума <span style="color:#81c784">V</span> з цими вагами → новий embedding</div>
+  </div>
+  <div style="color:#888;font-size:0.85em;margin-bottom:6px">
+    output = ${attnWeights[idx].map((w, j) => {
+      const jch = attnChars[j] === ' ' ? '␣' : attnChars[j];
+      return `<span style="color:${w > 0.15 ? '#4caf50' : '#555'}">${(w*100).toFixed(0)}%·V<sub>${jch}</sub></span>`;
+    }).join(' + ')}
+  </div>`;
+  // Compute weighted sum of V vectors
+  const resultVec = Array(32).fill(0);
+  for (let j = 0; j <= idx; j++) {
+    const w = attnWeights[idx][j];
+    attnVVecs[j].forEach((v, d) => resultVec[d] += w * v);
+  }
+  renderVectorRow(s4, 'out', resultVec.map(v => +v.toFixed(3)), 6);
+  panel.appendChild(s4);
+}
+
+function renderAttnMatrix() {
+  const out = document.getElementById('attnDataOutput');
+  out.innerHTML = '';
+  const maxShow = Math.min(attnChars.length, 10);
+  const title = document.createElement('div');
+  title.className = 'do-title';
+  title.innerHTML = `Повна матриця attention weights <span class="shape-badge">shape: (1, 6, ${attnChars.length}, ${attnChars.length})</span>`;
+  out.appendChild(title);
+  const sub = document.createElement('div');
+  sub.style.cssText = 'color:#666;font-size:0.8em;margin-bottom:8px';
+  sub.textContent = 'Одна голова з 6. Рядок = "хто питає", стовпець = "на кого дивиться". Зверни увагу на трикутну форму (causal mask):';
+  out.appendChild(sub);
+  const mc = document.createElement('div');
+  mc.className = 'matrix-container';
+  const table = document.createElement('table');
+  table.className = 'matrix-table';
+  const thead = document.createElement('tr');
+  thead.innerHTML = '<td class="header-cell"></td>';
+  for (let j = 0; j < maxShow; j++) {
+    const ch = attnChars[j] === ' ' ? '␣' : attnChars[j];
+    thead.innerHTML += `<td class="header-cell">${ch}</td>`;
+  }
+  table.appendChild(thead);
+  for (let i = 0; i < maxShow; i++) {
+    const tr = document.createElement('tr');
+    const ch = attnChars[i] === ' ' ? '␣' : attnChars[i];
+    tr.innerHTML = `<td class="header-cell">${ch}</td>`;
+    for (let j = 0; j < maxShow; j++) {
+      const w = j <= i ? (attnWeights[i][j] || 0) : 0;
+      const bg = j <= i ? `rgba(76,175,80,${w})` : 'rgba(239,83,80,0.12)';
+      tr.innerHTML += `<td style="background:${bg};color:${w > 0.3 ? '#fff' : '#888'}">${j <= i ? w.toFixed(2) : '—'}</td>`;
+    }
+    table.appendChild(tr);
+  }
+  mc.appendChild(table);
+  out.appendChild(mc);
+}
+
+function drawAttentionLines(n) {
+  const svg = document.getElementById('attnSvg');
+  const tokens = document.querySelectorAll('#attnTokens .attn-token');
+  const container = document.getElementById('attnContainer');
+
+  svg.innerHTML = '';
+  svg.setAttribute('width', container.offsetWidth);
+  svg.setAttribute('height', container.offsetHeight);
+
+  const rects = [...tokens].map(t => {
+    const r = t.getBoundingClientRect();
+    const cr = container.getBoundingClientRect();
+    return { cx: r.left - cr.left + r.width / 2, cy: r.top - cr.top + r.height / 2 };
+  });
+
+  for (let i = 1; i < n; i++) {
+    for (let j = 0; j < i; j++) {
+      const w = attnWeights[i][j];
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      const x1 = rects[j].cx, x2 = rects[i].cx;
+      const y = rects[i].cy;
+      const curve = Math.abs(i - j) * 8 + 20;
+      path.setAttribute('d', `M ${x1} ${y} Q ${(x1+x2)/2} ${y - curve} ${x2} ${y}`);
+      path.setAttribute('stroke-width', Math.max(1, w * 6));
+      path.setAttribute('class', 'attn-line');
+      path.dataset.from = j;
+      path.dataset.to = i;
+      svg.appendChild(path);
+    }
+  }
+}
+
+function highlightAttn(idx) {
+  document.querySelectorAll('.attn-token').forEach(t => {
+    t.classList.toggle('highlighted', parseInt(t.dataset.idx) <= idx);
+  });
+  document.querySelectorAll('.attn-line').forEach(l => {
+    const to = parseInt(l.dataset.to);
+    if (to === idx) {
+      l.classList.add('bright');
+      l.classList.remove('dimmed');
+    } else {
+      l.classList.add('dimmed');
+      l.classList.remove('bright');
+    }
+  });
+}
+
+function clearAttn() {
+  document.querySelectorAll('.attn-token').forEach(t => t.classList.remove('highlighted'));
+  document.querySelectorAll('.attn-line').forEach(l => {
+    l.classList.remove('bright', 'dimmed');
+  });
+}
+
+// ---- Step 4: Multi-Head Attention ----
+function initMultiHead() {
+  const text = document.getElementById('tokenInput').value || 'hello';
+  const chars = [...text].slice(0, 8);
+  const n = chars.length;
+  const container = document.getElementById('mhaHeadsContainer');
+  container.innerHTML = '';
+
+  const headColors = ['#e91e63','#4fc3f7','#4caf50','#ff9800','#ce93d8','#ffeb3b'];
+  const headDescs = [
+    'Дивиться на попередній токен (позиційна)',
+    'Дивиться на початок речення',
+    'Рівномірна увага на все',
+    'Фокусується на пробілах (межі слів)',
+    'Дивиться на схожі символи',
+    'Локальне вікно (±2 позиції)'
+  ];
+
+  // Generate different attention patterns for each head
+  function headWeights(headIdx) {
+    const w = [];
+    for (let i = 0; i < n; i++) {
+      const row = [];
+      let sum = 0;
+      for (let j = 0; j <= i; j++) {
+        let v = 0.1;
+        if (headIdx === 0) v = (j === i-1) ? 3 : 0.2;  // previous token
+        else if (headIdx === 1) v = (j === 0) ? 3 : 0.3; // first token
+        else if (headIdx === 2) v = 1;                    // uniform
+        else if (headIdx === 3) v = (chars[j] === ' ') ? 3 : 0.3; // spaces
+        else if (headIdx === 4) v = (chars[j] === chars[i]) ? 3 : 0.2; // same char
+        else if (headIdx === 5) v = (Math.abs(i-j) <= 2) ? 2 : 0.1; // local window
+        row.push(v); sum += v;
+      }
+      w.push(row.map(x => x / sum));
+    }
+    return w;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'mha-grid';
+
+  for (let h = 0; h < 6; h++) {
+    const hw = headWeights(h);
+    const head = document.createElement('div');
+    head.className = 'mha-head';
+
+    head.innerHTML = `
+      <div class="mha-head-title">
+        <div class="mha-head-num" style="background:${headColors[h]}30;color:${headColors[h]};border:1px solid ${headColors[h]}">${h+1}</div>
+        <span style="color:${headColors[h]}">Голова ${h+1}</span>
+        <span class="shape-badge" style="font-size:0.7em;border-color:#555;color:#888">32 dim</span>
+      </div>
+      <div class="mha-head-desc">${headDescs[h]}</div>
+    `;
+
+    // Mini attention matrix
+    const miniGrid = document.createElement('div');
+    miniGrid.className = 'mha-mini-matrix';
+    miniGrid.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const cell = document.createElement('div');
+        cell.className = 'mha-mini-cell';
+        if (j <= i) {
+          const w = hw[i][j];
+          cell.style.background = `rgba(${headColors[h].startsWith('#e') ? '233,30,99' : headColors[h].startsWith('#4fc') ? '79,195,247' : headColors[h].startsWith('#4ca') ? '76,175,80' : headColors[h].startsWith('#ff9') ? '255,152,0' : headColors[h].startsWith('#ce') ? '206,147,216' : '255,235,59'}, ${w})`;
+        } else {
+          cell.style.background = 'rgba(255,255,255,0.02)';
+        }
+        miniGrid.appendChild(cell);
+      }
+    }
+    head.appendChild(miniGrid);
+    grid.appendChild(head);
+  }
+  container.appendChild(grid);
+
+  // Concatenation visual
+  const out = document.getElementById('mhaDataOutput');
+  out.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'do-title';
+  title.innerHTML = 'Конкатенація результатів усіх голів:';
+  out.appendChild(title);
+
+  const concatVis = document.createElement('div');
+  concatVis.className = 'mha-concat-visual';
+  for (let h = 0; h < 6; h++) {
+    if (h > 0) {
+      const plus = document.createElement('span');
+      plus.className = 'mha-plus';
+      plus.textContent = '|';
+      concatVis.appendChild(plus);
+    }
+    const chunk = document.createElement('div');
+    chunk.className = 'mha-chunk';
+    chunk.style.background = `${headColors[h]}40`;
+    chunk.style.border = `1px solid ${headColors[h]}`;
+    chunk.style.color = headColors[h];
+    chunk.textContent = `H${h+1}: 32d`;
+    concatVis.appendChild(chunk);
+  }
+  const eq = document.createElement('span');
+  eq.style.cssText = 'font-size:1.5em;color:#4fc3f7;margin:0 8px';
+  eq.textContent = '→';
+  concatVis.appendChild(eq);
+  const result = document.createElement('div');
+  result.className = 'mha-chunk';
+  result.style.cssText = 'background:rgba(79,195,247,0.15);border:2px solid #4fc3f7;color:#4fc3f7;padding:0 16px';
+  result.textContent = '192 dim';
+  concatVis.appendChild(result);
+  out.appendChild(concatVis);
+
+  const proj = document.createElement('div');
+  proj.style.cssText = 'text-align:center;color:#888;font-size:0.85em;margin-top:8px';
+  proj.innerHTML = '↓ W<sub>out</sub> проєкція (192×192) → фінальний output attention';
+  out.appendChild(proj);
+
+  // Show first token's concatenated vector
+  const vecTitle = document.createElement('div');
+  vecTitle.style.cssText = 'color:#666;font-size:0.8em;margin:12px 0 6px';
+  vecTitle.textContent = 'Вектор першого токена після concat + projection (перші 8 із 192):';
+  out.appendChild(vecTitle);
+  renderVectorRow(out, 'out', fakeVector(192, 7777), 8);
+}
+
+// ---- Step 6: LayerNorm weights ----
+function initLayerNormWeights() {
+  const wPanel = document.getElementById('step6weights');
+  wPanel.innerHTML = '';
+  const wTitle = document.createElement('div');
+  wTitle.className = 'do-title';
+  wTitle.innerHTML = 'Ваги LayerNorm (gamma і beta):';
+  wPanel.appendChild(wTitle);
+  const note = document.createElement('div');
+  note.style.cssText = 'color:#aaa;font-size:0.9em;margin-bottom:10px;line-height:1.6';
+  note.innerHTML = 'LayerNorm має тільки <strong style="color:#fff">2 × 192 = 384 параметри</strong> — мінімум серед усіх компонентів.<br>'
+    + '<strong>gamma</strong> (масштаб) — модель вчить "наскільки сильно нормалізувати кожен вимір"<br>'
+    + '<strong>beta</strong> (зміщення) — модель вчить "яке базове значення для кожного виміру"';
+  wPanel.appendChild(note);
+  const gridsRow = document.createElement('div');
+  gridsRow.style.cssText = 'display:flex;gap:20px;flex-wrap:wrap;margin:8px 0';
+  createWeightGrid(gridsRow, 1, 16, 6001, 'gamma (масштаб)', 1, 192);
+  createWeightGrid(gridsRow, 1, 16, 6002, 'beta (зміщення)', 1, 192);
+  wPanel.appendChild(gridsRow);
+  const legend = document.createElement('div');
+  legend.className = 'weight-legend';
+  legend.innerHTML = '<span>негативна</span><div class="weight-legend-bar"></div><span>позитивна</span>';
+  wPanel.appendChild(legend);
+}
+
+// ---- Step 8: MLP weights ----
+function initMLPWeights() {
+  const wPanel = document.getElementById('step8weights');
+  wPanel.innerHTML = '';
+  const wTitle = document.createElement('div');
+  wTitle.className = 'do-title';
+  wTitle.innerHTML = 'Ваги MLP (найбільший компонент!):';
+  wPanel.appendChild(wTitle);
+  const legend = document.createElement('div');
+  legend.className = 'weight-legend';
+  legend.innerHTML = '<span>негативна</span><div class="weight-legend-bar"></div><span>позитивна</span>';
+  wPanel.appendChild(legend);
+  const gridsRow = document.createElement('div');
+  gridsRow.style.cssText = 'display:flex;gap:16px;flex-wrap:wrap;margin:8px 0';
+  const g1 = createWeightGrid(gridsRow, 16, 16, 8001, 'Linear expand', 192, 768);
+  const g2 = createWeightGrid(gridsRow, 16, 16, 8002, 'Linear compress', 768, 192);
+  wPanel.appendChild(gridsRow);
+
+  const status = document.createElement('div');
+  status.className = 'train-status';
+  status.innerHTML = '<strong style="color:#ff9800">Expand:</strong> 192×768 = 147,456 ваг &nbsp;&nbsp; '
+    + '<strong style="color:#ff9800">Compress:</strong> 768×192 = 147,456 ваг &nbsp;&nbsp; '
+    + '<strong style="color:#fff">Разом:</strong> 294,912 ваг на один блок × 4 блоки = <strong style="color:#ef5350">1,179,648</strong> — це 65% всієї моделі!';
+  wPanel.appendChild(status);
+
+  let mlpIter = 0;
+  const mlpStepsPerClick = 100;
+  const mlpMax = 1500;
+  function mlpLoss(it) { return 0.43 + (4.35 - 0.43) * Math.exp(-it / 350); }
+  const btn = document.createElement('button');
+  btn.className = 'train-btn';
+  btn.textContent = '▶ Крок тренування (+100 ітерацій)';
+  btn.onclick = () => {
+    mlpIter = Math.min(mlpIter + mlpStepsPerClick, mlpMax);
+    const progress = mlpIter / mlpMax;
+    animateTrainingStep(g1, progress);
+    animateTrainingStep(g2, progress);
+    const msg = mlpIter <= 200 ? 'ваги хаотичні — GELU фільтрує випадково'
+              : mlpIter <= 500 ? 'з\'являються патерни — деякі фічі стають важливішими'
+              : mlpIter <= 1000 ? 'модель вчиться! MLP знає які фічі активувати для кожного контексту'
+              : 'ваги стабільні — MLP навчився детектувати і фільтрувати фічі';
+    const note = document.createElement('div');
+    note.style.cssText = 'color:#4caf50;font-size:0.85em;margin-top:4px';
+    note.textContent = `iter ${mlpIter}/${mlpMax}: ${msg}`;
+    const old = wPanel.querySelector('.train-note');
+    if (old) old.remove();
+    note.className = 'train-note';
+    wPanel.appendChild(note);
+    if (mlpIter >= mlpMax) btn.disabled = true;
+  };
+  wPanel.appendChild(btn);
+}
+
+// ---- Step 5: Causal Mask ----
+function initMask() {
+  const text = document.getElementById('tokenInput').value || 'hello';
+  const chars = [...text].slice(0, 10); // cap at 10 for readability
+  const n = chars.length;
+  const wrapper = document.getElementById('maskWrapper');
+  wrapper.innerHTML = '';
+
+  // Build grid with labels
+  const table = document.createElement('div');
+  table.style.display = 'inline-block';
+
+  // Top labels
+  const topRow = document.createElement('div');
+  topRow.className = 'mask-labels-row';
+  topRow.innerHTML = '<div class="mask-label" style="width:48px"></div>'; // empty corner
+  chars.forEach(ch => {
+    const l = document.createElement('div');
+    l.className = 'mask-label';
+    l.textContent = ch === ' ' ? '␣' : ch;
+    topRow.appendChild(l);
+  });
+  table.appendChild(topRow);
+
+  // Grid rows
+  const grid = document.createElement('div');
+  grid.style.display = 'flex';
+
+  // Side labels
+  const sideLabels = document.createElement('div');
+  sideLabels.className = 'mask-labels-col';
+  chars.forEach(ch => {
+    const l = document.createElement('div');
+    l.className = 'mask-label';
+    l.textContent = ch === ' ' ? '␣' : ch;
+    sideLabels.appendChild(l);
+  });
+  grid.appendChild(sideLabels);
+
+  // Mask grid
+  const maskGrid = document.createElement('div');
+  maskGrid.className = 'mask-grid';
+  maskGrid.style.gridTemplateColumns = `repeat(${n}, 48px)`;
+
+  let delay = 0;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const cell = document.createElement('div');
+      const allowed = j <= i;
+      cell.className = `mask-cell ${allowed ? 'allowed' : 'blocked'} ${i === j ? 'diagonal' : ''}`;
+      cell.textContent = allowed ? '✓' : '✗';
+      cell.style.animationDelay = `${delay}ms`;
+      cell.style.animation = `popIn 0.2s ease ${delay}ms forwards`;
+      delay += 30;
+      maskGrid.appendChild(cell);
+    }
+  }
+
+  grid.appendChild(maskGrid);
+  table.appendChild(grid);
+  wrapper.appendChild(table);
+}
+
+// ---- Step 5: Transformer Block ----
+function initBlock() {
+  const flow = document.getElementById('blockFlow');
+  flow.innerHTML = '';
+
+  const nodes = [
+    { cls: 'input-node', text: 'Input', detail: '(batch, seq_len, 192)' },
+    { cls: 'ln-node', text: 'LayerNorm', detail: 'нормалізація значень' },
+    { cls: 'attn-node', text: 'Self-Attention', detail: '6 голів × 32 dim' },
+    { cls: 'residual-node', text: '+ Residual', detail: 'input + attention output' },
+    { cls: 'ln-node', text: 'LayerNorm', detail: 'нормалізація значень' },
+    { cls: 'mlp-node', text: 'MLP', detail: '192 → 768 → GELU → 192' },
+    { cls: 'residual-node', text: '+ Residual', detail: 'попередній + MLP output' },
+    { cls: 'output-node', text: 'Output', detail: '(batch, seq_len, 192) — той самий shape!' },
+  ];
+
+  nodes.forEach((node, i) => {
+    if (i > 0) {
+      const arrow = document.createElement('div');
+      arrow.className = node.cls === 'residual-node' ? 'block-arrow residual-arrow' : 'block-arrow';
+      arrow.textContent = '↓';
+      flow.appendChild(arrow);
+    }
+    const el = document.createElement('div');
+    el.className = `block-node ${node.cls}`;
+    el.innerHTML = `${node.text}<div class="block-detail">${node.detail}</div>`;
+    el.dataset.idx = i;
+    flow.appendChild(el);
+  });
+
+  // Animate nodes sequentially
+  const allNodes = flow.querySelectorAll('.block-node');
+  const text = document.getElementById('tokenInput').value || 'hello';
+  const T = text.length;
+  let idx = 0;
+  const out = document.getElementById('blockDataOutput');
+  out.innerHTML = '';
+
+  function activateNext() {
+    if (idx > 0) allNodes[idx - 1].classList.remove('active');
+    if (idx < allNodes.length) {
+      allNodes[idx].classList.add('active');
+      allNodes[idx].style.animation = `flowDown 0.4s ease`;
+      // Show data for this node
+      renderBlockData(out, idx, T);
+      idx++;
+      setTimeout(activateNext, 500);
+    } else {
+      allNodes.forEach(n => { n.classList.add('active'); n.style.opacity = '1'; });
+    }
+  }
+  activateNext();
+}
+
+function renderBlockData(container, nodeIdx, T) {
+  container.innerHTML = '';
+  const names = ['Input','LayerNorm','Self-Attention','+ Residual','LayerNorm','MLP','+ Residual','Output'];
+  const shapes = [
+    `(1, ${T}, 192)`, `(1, ${T}, 192)`, `(1, ${T}, 192)`, `(1, ${T}, 192)`,
+    `(1, ${T}, 192)`, `(1, ${T}, 192)`, `(1, ${T}, 192)`, `(1, ${T}, 192)`
+  ];
+  const details = [
+    'Embedding кожного токена',
+    'Нормалізовані значення (mean=0, std=1)',
+    'Після attention — кожен токен збагачений контекстом',
+    'Додаємо оригінальний input (shortcut connection)',
+    'Повторна нормалізація перед MLP',
+    'Розширення 192→768, GELU, стиснення 768→192',
+    'Додаємо попередній результат',
+    'Готово до наступного блоку або output head'
+  ];
+  // MLP internal shape
+  const mlpShapes = [null, null, null, null, null, `(1, ${T}, 768) → (1, ${T}, 192)`, null, null];
+
+  const title = document.createElement('div');
+  title.className = 'do-title';
+  title.innerHTML = `${names[nodeIdx]} <span class="shape-badge">${shapes[nodeIdx]}</span>`;
+  if (mlpShapes[nodeIdx]) {
+    title.innerHTML += ` <span class="shape-badge" style="border-color:#ff9800;color:#ff9800">${mlpShapes[nodeIdx]}</span>`;
+  }
+  container.appendChild(title);
+
+  const desc = document.createElement('div');
+  desc.style.cssText = 'color:#888;font-size:0.85em;margin-bottom:8px';
+  desc.textContent = details[nodeIdx];
+  container.appendChild(desc);
+
+  // Show first token's vector at this stage
+  const vec = fakeVector(192, nodeIdx * 1000 + 42);
+  renderVectorRow(container, 'tok[0]', vec, 8);
+}
+
+// ---- Step 6: Generation ----
+const GEN_VOCAB = 'abcdefghijklmnopqrstuvwxyz .,-';
+let genText = '';
+let genTemp = 1.0;
+
+// Fake probability distribution for next token.
+// Uses full context (genText) to guide "hello" → " world" convincingly,
+// then falls back to generic English-like distribution.
+function fakeProbs(lastChar, temp) {
+  // Scripted path: "hello" → " world"
+  // Map full context to desired next-char distribution
+  const scripted = {
+    'hello':       {' ':0.41, ',':0.12, '!':0.10, '.':0.08, 's':0.05},
+    'hello ':      {'w':0.38, 't':0.12, 'm':0.10, 'i':0.08, 'a':0.06},
+    'hello w':     {'o':0.45, 'h':0.11, 'i':0.09, 'a':0.08, 'e':0.06},
+    'hello wo':    {'r':0.52, 'n':0.09, 'o':0.08, 'u':0.06, 'k':0.04},
+    'hello wor':   {'l':0.61, 'k':0.08, 'd':0.06, 's':0.05, 'n':0.04},
+    'hello worl':  {'d':0.73, 'l':0.05, 's':0.04, 'y':0.03, 'e':0.03},
+    'hello world': {'!':0.35, '.':0.20, ',':0.12, ' ':0.10, '\n':0.05},
+  };
+
+  // Generic fallback distributions by last character
+  const generic = {
+    'h': {'e':0.40,'a':0.15,'i':0.12,'o':0.10,'u':0.05},
+    'e': {'r':0.20,' ':0.20,'n':0.15,'s':0.12,'l':0.10},
+    'l': {'l':0.22,'e':0.20,'i':0.15,'o':0.12,'a':0.10},
+    'o': {' ':0.20,'n':0.18,'r':0.15,'f':0.10,'u':0.08},
+    ' ': {'t':0.15,'a':0.12,'s':0.10,'w':0.10,'i':0.08},
+    'w': {'o':0.30,'a':0.20,'h':0.15,'i':0.12,'e':0.10},
+    'r': {'e':0.22,' ':0.18,'i':0.12,'o':0.10,'a':0.10},
+    'd': {' ':0.30,'e':0.15,'i':0.10,'o':0.10,'a':0.08},
+    '!': {' ':0.40,'\n':0.20,'!':0.10,'?':0.05,'I':0.05},
+    '.': {' ':0.45,'\n':0.25,'.':0.05,'I':0.04,'T':0.04},
+    ',': {' ':0.50,'a':0.08,'t':0.07,'b':0.06,'i':0.05},
+    'a': {'n':0.20,'t':0.15,'l':0.12,'r':0.10,' ':0.10},
+    'i': {'n':0.20,'s':0.18,'t':0.12,'o':0.10,'l':0.08},
+    'n': {' ':0.22,'g':0.15,'d':0.12,'e':0.10,'t':0.10},
+    's': {' ':0.25,'t':0.15,'e':0.12,'i':0.10,'s':0.08},
+    't': {'h':0.25,'e':0.20,'i':0.12,'o':0.10,' ':0.08},
+  };
+
+  // Try scripted path first (match full context)
+  let base = scripted[genText] || generic[lastChar] || {};
+  if (Object.keys(base).length === 0) {
+    'etaoins '.split('').forEach((c, i) => base[c] = 0.2 - i * 0.02);
+  }
+
+  // Apply temperature
+  let entries = Object.entries(base);
+  let logits = entries.map(([c, p]) => Math.log(p + 0.001) / temp);
+  let maxL = Math.max(...logits);
+  let exps = logits.map(l => Math.exp(l - maxL));
+  let sumE = exps.reduce((a, b) => a + b, 0);
+
+  return entries.map(([ch, _], i) => ({
+    char: ch === ' ' ? '␣' : ch,
+    realChar: ch,
+    prob: exps[i] / sumE
+  })).sort((a, b) => b.prob - a.prob).slice(0, 5);
+}
+
+function initGeneration() {
+  genText = 'hello';
+  genTemp = parseFloat(document.getElementById('tempSlider').value);
+  renderGen();
+}
+
+function renderGen() {
+  const prompt = document.getElementById('genPrompt');
+  prompt.innerHTML = '';
+  [...genText].forEach((ch, i) => {
+    const el = document.createElement('div');
+    el.className = `gen-char ${i >= 5 ? 'new' : ''}`;
+    el.textContent = ch === ' ' ? '␣' : ch;
+    prompt.appendChild(el);
+  });
+
+  // Show probs for next token
+  const lastChar = genText[genText.length - 1];
+  const probs = fakeProbs(lastChar, genTemp);
+  const barsDiv = document.getElementById('probBars');
+  barsDiv.innerHTML = '<div style="text-align:center;color:#888;font-size:0.85em;margin-bottom:10px">Ймовірності наступного токена:</div>';
+
+  probs.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'prob-bar-row';
+    row.innerHTML = `
+      <div class="prob-char">${p.char}</div>
+      <div class="prob-track">
+        <div class="prob-fill ${i === 0 ? 'winner' : 'other'}"
+             style="width:${p.prob * 100}%">${(p.prob * 100).toFixed(1)}%</div>
+      </div>
+    `;
+    barsDiv.appendChild(row);
+  });
+
+  // Data output: show logits → softmax pipeline
+  const out = document.getElementById('genDataOutput');
+  out.innerHTML = '';
+  const title = document.createElement('div');
+  title.className = 'do-title';
+  title.innerHTML = `Вихід моделі: logits → softmax → probabilities <span class="shape-badge">shape: (1, ${genText.length}, vocab_size)</span>`;
+  out.appendChild(title);
+
+  const sub1 = document.createElement('div');
+  sub1.style.cssText = 'color:#666;font-size:0.8em;margin-bottom:6px';
+  sub1.textContent = 'Logits останньої позиції (до softmax, необроблені числа):';
+  out.appendChild(sub1);
+  const logitsRow = document.createElement('div');
+  logitsRow.className = 'logits-row';
+  probs.forEach((p, i) => {
+    const rawLogit = (Math.log(p.prob + 0.001) * genTemp).toFixed(2);
+    const chip = document.createElement('div');
+    chip.className = 'logit-chip';
+    chip.style.background = i === 0 ? 'rgba(76,175,80,0.2)' : 'rgba(255,255,255,0.05)';
+    chip.innerHTML = `<span class="logit-char">${p.char}</span><span class="logit-val">${rawLogit}</span>`;
+    logitsRow.appendChild(chip);
+  });
+  out.appendChild(logitsRow);
+
+  const sub2 = document.createElement('div');
+  sub2.style.cssText = 'color:#666;font-size:0.8em;margin:8px 0 4px';
+  sub2.textContent = `Після softmax(logits / temperature=${genTemp.toFixed(1)}) → ймовірності:`;
+  out.appendChild(sub2);
+  const probsRow = document.createElement('div');
+  probsRow.className = 'logits-row';
+  probs.forEach((p, i) => {
+    const chip = document.createElement('div');
+    chip.className = 'logit-chip';
+    chip.style.background = i === 0 ? 'rgba(76,175,80,0.3)' : 'rgba(255,255,255,0.05)';
+    chip.innerHTML = `<span class="logit-char">${p.char}</span><span class="logit-val">${(p.prob * 100).toFixed(1)}%</span>`;
+    probsRow.appendChild(chip);
+  });
+  out.appendChild(probsRow);
+}
+
+// Scripted sequence: after "hello", always produce " world!"
+const SCRIPTED_SEQ = {
+  'hello': ' ', 'hello ': 'w', 'hello w': 'o', 'hello wo': 'r',
+  'hello wor': 'l', 'hello worl': 'd', 'hello world': '!',
+};
+
+function genNextToken() {
+  if (genText.length >= 30) return;
+
+  const lastChar = genText[genText.length - 1];
+  const probs = fakeProbs(lastChar, genTemp);
+
+  let chosen;
+  if (SCRIPTED_SEQ[genText]) {
+    // On the scripted path: always pick the "right" next char
+    chosen = SCRIPTED_SEQ[genText];
+  } else {
+    // Off-script: sample randomly
+    let r = Math.random();
+    chosen = probs[0].realChar;
+    let cumSum = 0;
+    for (const p of probs) {
+      cumSum += p.prob;
+      if (r < cumSum) { chosen = p.realChar; break; }
+    }
+  }
+
+  genText += chosen;
+  renderGen();
+}
+
+function resetGen() {
+  genText = 'hello';
+  renderGen();
+}
+
+document.getElementById('tempSlider').addEventListener('input', (e) => {
+  genTemp = parseFloat(e.target.value);
+  document.getElementById('tempVal').textContent = genTemp.toFixed(1);
+  renderGen();
+});
+
+// ---- Init ----
+buildNav();
+goStep(1); // start on config
+</script>
+</body>
+</html>

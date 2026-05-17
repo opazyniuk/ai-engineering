@@ -1,0 +1,31 @@
+device=mps vocab_size=132 chars=4,591,409
+params=1,855,104
+iter    0 | train 5.039 | val 5.041 | 3s
+iter  250 | train 2.509 | val 2.505 | 30s
+iter  500 | train 2.224 | val 2.221 | 56s
+iter  750 | train 1.877 | val 1.874 | 83s
+iter 1000 | train 1.658 | val 1.645 | 113s
+iter 1250 | train 1.501 | val 1.510 | 143s
+iter 1500 | train 1.417 | val 1.411 | 166s
+iter 1750 | train 1.344 | val 1.349 | 189s
+iter 2000 | train 1.289 | val 1.296 | 211s
+iter 2250 | train 1.257 | val 1.266 | 234s
+iter 2500 | train 1.222 | val 1.218 | 256s
+iter 2750 | train 1.207 | val 1.207 | 278s
+iter 3000 | train 1.180 | val 1.179 | 300s
+iter 3250 | train 1.155 | val 1.160 | 322s
+iter 3500 | train 1.145 | val 1.147 | 344s
+iter 3750 | train 1.125 | val 1.131 | 366s
+iter 4000 | train 1.112 | val 1.116 | 387s
+iter 4250 | train 1.097 | val 1.108 | 409s
+iter 4500 | train 1.090 | val 1.097 | 431s
+iter 4750 | train 1.082 | val 1.075 | 452s
+iter 5000 | train 1.060 | val 1.080 | 474s
+
+training done in 474s
+
+min val loss = 1.075 at iter 4750
+train at that iter = 1.082
+final train/val gap = 0.020
+
+plot saved to plots/loss.png

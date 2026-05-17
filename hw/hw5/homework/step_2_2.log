@@ -1,0 +1,11 @@
+loading checkpoint from checkpoint.pt...
+model loaded: 1,855,104 params on mps
+prompt='Президент України Володимир'  len=27 tokens
+capturing attention: 4 layers × 6 heads = 24 maps
+saved plots/attention_heatmap.png
+
+stats per layer (entropy of average attention distribution):
+  layer 0: mean entropy = 1.022 (max possible = 3.296)
+  layer 1: mean entropy = 1.051 (max possible = 3.296)
+  layer 2: mean entropy = 0.792 (max possible = 3.296)
+  layer 3: mean entropy = 1.095 (max possible = 3.296)

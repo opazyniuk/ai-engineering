@@ -1,0 +1,26 @@
+device=mps vocab_size=132 chars=4,591,409
+params=1,855,104
+iter    0 | train 5.039 | val 5.041 | 3s
+iter  250 | train 2.509 | val 2.505 | 25s
+iter  500 | train 2.224 | val 2.221 | 48s
+iter  750 | train 1.877 | val 1.874 | 70s
+iter 1000 | train 1.658 | val 1.645 | 92s
+iter 1250 | train 1.501 | val 1.510 | 114s
+iter 1500 | train 1.417 | val 1.411 | 137s
+iter 1750 | train 1.344 | val 1.349 | 159s
+iter 2000 | train 1.289 | val 1.296 | 182s
+iter 2250 | train 1.257 | val 1.266 | 204s
+iter 2500 | train 1.222 | val 1.218 | 227s
+iter 2750 | train 1.207 | val 1.207 | 249s
+iter 3000 | train 1.180 | val 1.179 | 272s
+iter 3250 | train 1.155 | val 1.160 | 294s
+iter 3500 | train 1.145 | val 1.147 | 317s
+iter 3750 | train 1.125 | val 1.131 | 339s
+iter 4000 | train 1.112 | val 1.116 | 362s
+iter 4250 | train 1.097 | val 1.108 | 384s
+iter 4500 | train 1.090 | val 1.097 | 406s
+iter 4750 | train 1.082 | val 1.075 | 429s
+iter 5000 | train 1.060 | val 1.080 | 451s
+
+training done in 451s
+checkpoint saved to checkpoint.pt (7.3 MB)

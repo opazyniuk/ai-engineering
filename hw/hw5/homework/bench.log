@@ -1,0 +1,15 @@
+benchmarking http://localhost:8000/generate
+lengths=[50, 100, 200], repeats=3, temp=1.0, top_k=20
+
+warmup...
+
+ length |  server avg |  server std |  total avg | tok/s avg
+----------------------------------------------------------------------
+     50 |    689.1 ms |    129.3 ms |   693.3 ms |    74.3
+    100 |   1555.4 ms |    214.4 ms |  1565.9 ms |    65.1
+    200 |   2260.8 ms |    415.5 ms |  2271.2 ms |    90.4
+
+ratio analysis (server time):
+   50 tokens: 1.00× of 50-token baseline
+  100 tokens: 2.26× of 50-token baseline
+  200 tokens: 3.28× of 50-token baseline
