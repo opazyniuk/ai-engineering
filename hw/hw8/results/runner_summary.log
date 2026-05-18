@@ -1,0 +1,23 @@
+=== FAISS-Flat ===
+  index_time=7.06s  disk=3064.0 MB
+=== FAISS-HNSW(M=32,efC=200,efS=16) (will sweep ef) ===
+  index_time=283.18s  disk=3199.8 MB
+  ef=16: p50=0.208ms p95=0.332ms recall_qrels=0.9537 recall_flat=0.9883
+  ef=32: p50=0.306ms p95=0.429ms recall_qrels=0.9581 recall_flat=0.9959
+  ef=64: p50=0.507ms p95=0.693ms recall_qrels=0.9594 recall_flat=0.998
+  ef=128: p50=0.881ms p95=1.231ms recall_qrels=0.9599 recall_flat=0.9985
+  ef=256: p50=1.604ms p95=2.265ms recall_qrels=0.96 recall_flat=0.999
+=== Chroma(M=32,efC=200,efS=64) ===
+  index_time=1694.48s  disk=3288.6 MB
+=== Qdrant(m=32,efC=200,efS=16) (will sweep ef) ===
+  index_time=701.58s  disk=3448.6 MB
+  ef=16: p50=5.763ms p95=8.139ms recall_qrels=0.9569 recall_flat=0.9783
+  ef=32: p50=7.23ms p95=10.388ms recall_qrels=0.9594 recall_flat=0.9906
+  ef=64: p50=9.1ms p95=13.839ms recall_qrels=0.96 recall_flat=0.9952
+  ef=128: p50=11.766ms p95=15.971ms recall_qrels=0.96 recall_flat=0.9972
+  ef=256: p50=17.099ms p95=23.32ms recall_qrels=0.9602 recall_flat=0.9979
+=== pgvector(m=32,efC=200,efS=16) (will sweep ef) ===
+  index_time=7559.95s  disk=8251.5 MB
+  ef=16: p50=6.575ms p95=11.302ms recall_qrels=0.9546 recall_flat=0.9907
+  ef=32: p50=9.029ms p95=16.211ms recall_qrels=0.9587 recall_flat=0.9953
+  ef=64: p50=12.125ms p95=22.156ms recall_qrels=0.9596 recall_flat=0.9967

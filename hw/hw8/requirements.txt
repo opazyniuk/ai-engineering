@@ -1,0 +1,23 @@
+# Core
+numpy>=1.26
+tqdm>=4.66
+psutil>=5.9
+python-dotenv>=1.0
+
+# Dataset
+datasets>=2.18
+
+# Embeddings (OpenAI)
+openai>=1.30
+tiktoken>=0.7
+
+# Vector DBs
+faiss-cpu>=1.8
+qdrant-client>=1.9
+chromadb>=0.5
+psycopg[binary]>=3.1
+pgvector>=0.3
+
+# Plotting / analysis
+matplotlib>=3.8
+pandas>=2.2

@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+
+data/*
+!data/.gitignore
+
+results/*.csv
+results/*.png
+
+*.npy
+*.faiss
+*.bin
+chroma_db/
+qdrant_storage/
