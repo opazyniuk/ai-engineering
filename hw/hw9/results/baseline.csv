@@ -1,0 +1,5 @@
+size,retriever,recall@1,recall@5,recall@10,mrr@10,latency_p50_ms,latency_p95_ms,latency_p99_ms,throughput_qps,rss_mb,index_mb
+1000,dense_bruteforce,0.98,1.0,1.0,0.99,0.02,0.02,0.02,15186.2,502.0,1.5
+10000,dense_bruteforce,0.96,0.97,0.99,0.9671,0.34,0.37,0.38,972.7,517.0,14.6
+100000,dense_bruteforce,0.9,0.94,0.95,0.9179,4.11,4.53,4.63,80.1,664.0,146.5
+300000,dense_bruteforce,0.78,0.91,0.94,0.8379,12.73,13.72,16.4,25.5,1095.0,439.5

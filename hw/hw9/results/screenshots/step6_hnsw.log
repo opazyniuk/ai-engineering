@@ -1,0 +1,12 @@
+
+==================== HNSW size=100000 ====================
+  subset (100000, 384), RSS=803MB
+  built HNSW in 11.0s, RSS=837MB
+  -> hnsw_M16_ef64: {'recall@1': 0.88, 'recall@5': 0.92, 'recall@10': 0.93, 'mrr@10': 0.8979} | p50=0.20ms p95=0.44ms | build=11.0s
+
+==================== HNSW size=300000 ====================
+  subset (300000, 384), RSS=1722MB
+  built HNSW in 44.1s, RSS=991MB
+  -> hnsw_M16_ef64: {'recall@1': 0.76, 'recall@5': 0.88, 'recall@10': 0.91, 'mrr@10': 0.8129} | p50=0.23ms p95=0.30ms | build=44.1s
+
+Appended HNSW rows to /Users/ostappazyniuk/dev/education/ai-engineering/hw/hw9/results/fixes.csv

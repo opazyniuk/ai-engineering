@@ -1,0 +1,9 @@
+datasets>=2.18
+sentence-transformers>=2.7
+faiss-cpu>=1.7.4
+rank_bm25>=0.2.2
+numpy>=1.26
+pandas>=2.2
+matplotlib>=3.8
+tqdm>=4.66
+psutil>=5.9

@@ -1,0 +1,17 @@
+Loaded 4 rows from /Users/ostappazyniuk/dev/education/ai-engineering/hw/hw9/results/baseline.csv
+  size        retriever  recall@1  recall@5  recall@10  mrr@10  latency_p50_ms  latency_p95_ms  latency_p99_ms  throughput_qps  rss_mb  index_mb
+  1000 dense_bruteforce      0.98      1.00       1.00  0.9900            0.02            0.02            0.02         15186.2   502.0       1.5
+ 10000 dense_bruteforce      0.96      0.97       0.99  0.9671            0.34            0.37            0.38           972.7   517.0      14.6
+100000 dense_bruteforce      0.90      0.94       0.95  0.9179            4.11            4.53            4.63            80.1   664.0     146.5
+300000 dense_bruteforce      0.78      0.91       0.94  0.8379           12.73           13.72           16.40            25.5  1095.0     439.5
+
+Plotting baseline...
+  saved recall_vs_size.png
+  saved latency_vs_size.png
+  saved mrr_vs_size.png
+  saved ops_vs_size.png
+
+Knee-point analysis (>=20% drop or >=100x latency slowdown vs 1K):
+  size=100000: latency_p50_ms grew 205.5x (0.02 -> 4.11 ms)
+  size=300000: recall@1 dropped 20.4% (0.980 -> 0.780)
+  size=300000: latency_p50_ms grew 636.5x (0.02 -> 12.73 ms)

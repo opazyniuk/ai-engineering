@@ -1,0 +1,26 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+Loading qrels + queries...
+Picked 100 eval queries with 107 relevant docs.
+Streaming corpus (~5-10 min)...
+Pool: 300107 docs
+Cached to /Users/ostappazyniuk/dev/education/ai-engineering/hw/hw9/data/cache/corpus.json
+real 255.85
+user 225.09
+sys 11.98
+          1802731520  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+             1298498  page reclaims
+                7740  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                 335  messages sent
+              250745  messages received
+                   0  signals received
+                7438  voluntary context switches
+             1207219  involuntary context switches
+       2954426581444  instructions retired
+        748210912094  cycles elapsed
+          7382140992  peak memory footprint

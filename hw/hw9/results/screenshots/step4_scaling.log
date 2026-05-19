@@ -1,0 +1,29 @@
+Loading cached embeddings...
+  corpus: (300107, 384), queries: (100, 384), eval: 100
+  RAM after load: 490 MB
+
+=== size=1000 ===
+  subset: (1000, 384), RAM after slice: 501 MB
+  metrics: {'recall@1': 0.98, 'recall@5': 1.0, 'recall@10': 1.0, 'mrr@10': 0.99}
+  latency p50=0.02 ms, p95=0.02 ms, p99=0.02 ms, qps=15186.2
+  index_mb=1.5, rss_mb=502.0
+
+=== size=10000 ===
+  subset: (10000, 384), RAM after slice: 517 MB
+  metrics: {'recall@1': 0.96, 'recall@5': 0.97, 'recall@10': 0.99, 'mrr@10': 0.9671}
+  latency p50=0.34 ms, p95=0.37 ms, p99=0.38 ms, qps=972.7
+  index_mb=14.6, rss_mb=517.0
+
+=== size=100000 ===
+  subset: (100000, 384), RAM after slice: 664 MB
+  metrics: {'recall@1': 0.9, 'recall@5': 0.94, 'recall@10': 0.95, 'mrr@10': 0.9179}
+  latency p50=4.11 ms, p95=4.53 ms, p99=4.63 ms, qps=80.1
+  index_mb=146.5, rss_mb=664.0
+
+=== size=300000 ===
+  subset: (300000, 384), RAM after slice: 1101 MB
+  metrics: {'recall@1': 0.78, 'recall@5': 0.91, 'recall@10': 0.94, 'mrr@10': 0.8379}
+  latency p50=12.73 ms, p95=13.72 ms, p99=16.40 ms, qps=25.5
+  index_mb=439.5, rss_mb=1095.0
+
+Saved /Users/ostappazyniuk/dev/education/ai-engineering/hw/hw9/results/baseline.csv
