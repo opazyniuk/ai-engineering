@@ -1,0 +1,25 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Local state
+data/cost.db
+data/cost.db-journal
+data/qdrant/
+data/redis/
+suspicious_requests.log
+suspicious_responses.log
+
+# Models cache (sentence-transformers скачує ~80MB при першому запуску)
+.cache/
+models/
+
+# IDE
+.vscode/
+.idea/
+
+# Screenshots зберігаємо
+!screenshots/
